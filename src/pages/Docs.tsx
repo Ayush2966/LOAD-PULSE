@@ -425,7 +425,10 @@ export default function Docs() {
         <div className="docs-callout">
           <span className="docs-callout-icon">💡</span>
           <span>Postman environment variables like <code>{'{{baseUrl}}'}</code> are kept in the cURL output. You can replace them with LoadPulse variables like <code>{'{{uuid}}'}</code> or hard-code the values before running.</span>
-      {/* 13. Apdex & SLA */}
+        </div>
+      </section>
+
+      {/* 14. Apdex & SLA */}
       <section id="apdex" className="docs-section">
         <h2 className="docs-h2">13. Apdex Score & SLA Checker</h2>
         <p className="docs-p">After a test completes, LoadPulse automatically calculates an <strong>Apdex score</strong> and runs your <strong>SLA rules</strong> against the results. Both panels appear in the Final Report section.</p>
@@ -484,7 +487,9 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
           <span className="docs-callout-icon">💡</span>
           <span>SLA rules are local to the report view and reset each session. To save a custom SLA profile, export the report as JSON and re-load it from History.</span>
         </div>
-      {/* 13. Sharing Reports */}
+      </section>
+
+      {/* 15. Sharing Reports */}
       <section id="sharing" className="docs-section">
         <h2 className="docs-h2">13. Sharing Reports</h2>
         <p className="docs-p">After a test completes, click <strong>🔗 Share Report</strong> in the report section. This copies a URL to your clipboard that encodes the entire report — anyone who opens the link sees the full results instantly, no account or backend needed.</p>

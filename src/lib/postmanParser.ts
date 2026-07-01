@@ -63,7 +63,7 @@ function resolveBody(body: PMBody | undefined): string | null {
   return null
 }
 
-export function requestToCurl(req: PMRequest, name: string): string {
+export function requestToCurl(req: PMRequest, _name: string): string {
   const method = (req.method ?? 'GET').toUpperCase()
   const url = resolveUrl(req.url)
   if (!url) return ''

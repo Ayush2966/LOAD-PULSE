@@ -261,7 +261,7 @@ export default function Run() {
       )}
 
       {/* ── Final report ── */}
-      {isDone && report && <ReportView report={report} />}
+      {isDone && report && <ReportView report={report} log={logBuf} />}
     </div>
   )
 }

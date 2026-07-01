@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import Run from './pages/Run'
 import History from './pages/History'
 import Compare from './pages/Compare'

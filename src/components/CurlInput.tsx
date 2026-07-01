@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { parseCurl } from '../lib/curlParser'
 import type { ParsedCurl } from '../lib/types'
 
@@ -10,6 +10,25 @@ export default function CurlInput({ onParsed }: Props) {
   const [raw, setRaw] = useState('')
   const [err, setErr] = useState('')
   const [parsed, setParsed] = useState<ParsedCurl | null>(null)
+
+  useEffect(() => {
+    function onSetCurl(e: Event) {
+      const curl = (e as CustomEvent<string>).detail
+      setRaw(curl)
+      if (!curl.trim()) { setErr(''); setParsed(null); return }
+      try {
+        const p = parseCurl(curl)
+        setErr('')
+        setParsed(p)
+        onParsed(p)
+      } catch (ex: unknown) {
+        setErr((ex as Error).message || 'Parse error')
+        setParsed(null)
+      }
+    }
+    window.addEventListener('loadpulse:setcurl', onSetCurl)
+    return () => window.removeEventListener('loadpulse:setcurl', onSetCurl)
+  }, [onParsed])
 
   function handleChange(val: string) {
     setRaw(val)

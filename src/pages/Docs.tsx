@@ -26,6 +26,7 @@ export default function Docs() {
             ['#history', '10. History & Compare'],
             ['#shortcuts', '11. Keyboard Shortcuts'],
             ['#presets', '12. Presets'],
+            ['#postman', '13. Postman Import'],
             ['#apdex', '13. Apdex & SLA'],
             ['#sharing', '13. Sharing Reports'],
           ].map(([href, label]) => (
@@ -387,6 +388,43 @@ export default function Docs() {
         </div>
       </section>
 
+      {/* 13. Postman Import */}
+      <section id="postman" className="docs-section">
+        <h2 className="docs-h2">13. Postman Import</h2>
+        <p className="docs-p">Already have a Postman collection? Import it directly — no copy-pasting cURL required. LoadPulse parses Postman Collection v2.0 and v2.1 JSON files and lets you search and pick any request to load test.</p>
+        <div className="docs-steps">
+          {[
+            ['Export your collection', 'In Postman, open the Collections sidebar → click ··· next to your collection → Export → select Collection v2.1 → Save.'],
+            ['Click "Import from Postman"', 'On the Run page, click the "📦 Import from Postman" button above the cURL input.'],
+            ['Load the file or paste JSON', 'Either choose the exported .json file, or paste the raw JSON directly into the text area.'],
+            ['Search and select a request', 'Browse or search by name, URL, or folder. Click any request row to load it into the cURL input.'],
+            ['Run your test', 'The request is now in the cURL box — add variables, configure your load pattern, and run as normal.'],
+          ].map(([title, desc], i) => (
+            <div key={i} className="docs-step">
+              <div className="docs-step-num">{i + 1}</div>
+              <div><div className="docs-step-title">{title}</div><div className="docs-step-desc">{desc}</div></div>
+            </div>
+          ))}
+        </div>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Feature</th><th>Supported</th></tr></thead>
+            <tbody>
+              <tr><td>Collection v2.0 &amp; v2.1</td><td>✓</td></tr>
+              <tr><td>Nested folders</td><td>✓ — shown as grouped sections</td></tr>
+              <tr><td>Headers (including auth headers)</td><td>✓</td></tr>
+              <tr><td>Bearer token auth</td><td>✓ — converted to Authorization header</td></tr>
+              <tr><td>JSON / raw body</td><td>✓</td></tr>
+              <tr><td>URL-encoded body</td><td>✓</td></tr>
+              <tr><td>Form-data body</td><td>Text fields only — binary files skipped</td></tr>
+              <tr><td>Disabled headers / params</td><td>✓ — automatically excluded</td></tr>
+              <tr><td>Environment variables (e.g. <code>{'{{baseUrl}}'}</code>)</td><td>Preserved as-is — replace manually or use LoadPulse variables</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="docs-callout">
+          <span className="docs-callout-icon">💡</span>
+          <span>Postman environment variables like <code>{'{{baseUrl}}'}</code> are kept in the cURL output. You can replace them with LoadPulse variables like <code>{'{{uuid}}'}</code> or hard-code the values before running.</span>
       {/* 13. Apdex & SLA */}
       <section id="apdex" className="docs-section">
         <h2 className="docs-h2">13. Apdex Score & SLA Checker</h2>

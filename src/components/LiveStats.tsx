@@ -1,7 +1,13 @@
 import { useTestStore } from '../store/testStore'
+import { percentile } from '../lib/percentile'
 
 export default function LiveStats() {
-  const { stats, elapsedSec, actualRps, thresholdMsg } = useTestStore()
+  const { stats, elapsedSec, actualRps, thresholdMsg, chartPts } = useTestStore()
+  const livePercentiles = chartPts.length > 10 ? {
+    p50: percentile(chartPts.map(p => p.lat), 50),
+    p95: percentile(chartPts.map(p => p.lat), 95),
+    p99: percentile(chartPts.map(p => p.lat), 99),
+  } : null
   const sr = stats.sent ? (stats.ok / stats.sent * 100).toFixed(1) : '—'
 
   return (
@@ -37,6 +43,13 @@ export default function LiveStats() {
           <div className="stat-value">{elapsedSec}s</div>
         </div>
       </div>
+      {stats.sent > 10 && livePercentiles && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 16, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', flexWrap: 'wrap' }}>
+          <span>p50 <span style={{ color: 'var(--text)' }}>{livePercentiles.p50}ms</span></span>
+          <span>p95 <span style={{ color: 'var(--text)' }}>{livePercentiles.p95}ms</span></span>
+          <span>p99 <span style={{ color: 'var(--text)' }}>{livePercentiles.p99}ms</span></span>
+        </div>
+      )}
     </div>
   )
 }

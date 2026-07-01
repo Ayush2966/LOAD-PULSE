@@ -6,6 +6,7 @@ import PercentileTable from './PercentileTable'
 import ApdexCard from './ApdexCard'
 import { useTestStore } from '../store/testStore'
 import { exportCSV, exportExcel } from '../lib/exporter'
+import { buildShareUrl } from '../lib/shareReport'
 
 interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[] }
 
@@ -147,6 +148,15 @@ export default function ReportView({ report, log = [], latencies }: Props) {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary btn-sm" onClick={(e) => {
+          const url = buildShareUrl(report)
+          navigator.clipboard.writeText(url).then(() => {
+            const btn = e.currentTarget as HTMLButtonElement
+            const orig = btn.textContent
+            btn.textContent = '✓ Copied!'
+            setTimeout(() => { btn.textContent = orig }, 2000)
+          })
+        }}>🔗 Share Report</button>
         <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
         <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>
         <button className="btn btn-ghost" onClick={handleCSV}>↓ CSV</button>

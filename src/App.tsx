@@ -4,6 +4,7 @@ import Run from './pages/Run'
 import History from './pages/History'
 import Compare from './pages/Compare'
 import Docs from './pages/Docs'
+import SharedReport from './pages/SharedReport'
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="/history" element={<Layout><History /></Layout>} />
         <Route path="/compare" element={<Layout><Compare /></Layout>} />
         <Route path="/docs" element={<Layout><Docs /></Layout>} />
+        <Route path="/report" element={<SharedReport />} />
       </Routes>
       <InstallBanner />
     </BrowserRouter>

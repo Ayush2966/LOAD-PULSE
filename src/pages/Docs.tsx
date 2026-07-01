@@ -26,6 +26,7 @@ export default function Docs() {
             ['#history', '10. History & Compare'],
             ['#shortcuts', '11. Keyboard Shortcuts'],
             ['#presets', '12. Presets'],
+            ['#sharing', '13. Sharing Reports'],
           ].map(([href, label]) => (
             <a key={href} href={href} className="docs-toc-link">{label}</a>
           ))}
@@ -382,6 +383,23 @@ export default function Docs() {
         <div className="docs-callout">
           <span className="docs-callout-icon">💡</span>
           <span>Presets are saved in <code>localStorage</code> and persist across sessions. They store the cURL command, pattern type, and rate/duration values.</span>
+        </div>
+      </section>
+
+      {/* 13. Sharing Reports */}
+      <section id="sharing" className="docs-section">
+        <h2 className="docs-h2">13. Sharing Reports</h2>
+        <p className="docs-p">After a test completes, click <strong>🔗 Share Report</strong> in the report section. This copies a URL to your clipboard that encodes the entire report — anyone who opens the link sees the full results instantly, no account or backend needed.</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Detail</th><th>Info</th></tr></thead>
+            <tbody>
+              <tr><td><strong>How it works</strong></td><td>The report JSON is Base64-encoded and stored in the URL hash (<code>#data=…</code>). Nothing is sent to a server.</td></tr>
+              <tr><td><strong>URL length</strong></td><td>Typical reports are 2–10 KB encoded. Works in Slack, email, and most browsers. Very large logs (&gt;2000 requests) may produce long URLs.</td></tr>
+              <tr><td><strong>Privacy</strong></td><td>Anyone with the link can see the full report including your API URL. Headers and bodies are not included — only response metadata.</td></tr>
+              <tr><td><strong>Route</strong></td><td>Shared reports open at <code>/report#data=…</code> — a clean standalone view with an "Open LoadPulse" link.</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

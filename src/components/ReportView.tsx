@@ -2,11 +2,12 @@ import type { ReportData } from '../lib/types'
 import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
 import Histogram from './Histogram'
+import PercentileTable from './PercentileTable'
 import { useTestStore } from '../store/testStore'
 
-interface Props { report: ReportData }
+interface Props { report: ReportData; latencies?: number[] }
 
-export default function ReportView({ report }: Props) {
+export default function ReportView({ report, latencies }: Props) {
   const { chartPts, tputPts } = useTestStore()
   const m = report.meta
   const sr = parseFloat(m.successRate)
@@ -76,6 +77,12 @@ export default function ReportView({ report }: Props) {
         <div className="card-title">Latency Distribution</div>
         <Histogram points={chartPts} />
       </div>
+
+      {latencies && latencies.length > 0 && (
+        <div className="card mb-16">
+          <PercentileTable latencies={latencies} />
+        </div>
+      )}
 
       {failEntries.length > 0 && (
         <div>

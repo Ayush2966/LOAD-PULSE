@@ -75,6 +75,21 @@ export default function Run() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        if (!running && parsed) handleStart()
+      }
+      if (e.key === 'Escape' && running) {
+        stopTest('manual')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [running, parsed])
+
   function handleStart() {
     if (!parsed) return
     reset()
@@ -227,6 +242,7 @@ export default function Run() {
           <button className="btn btn-ghost" onClick={reset}>Reset</button>
         )}
         {!parsed && <span className="action-hint">Paste a cURL command above to start</span>}
+        <span className="action-hint" style={{ fontSize: 11, marginLeft: 'auto' }}>⌘↵ run · Esc stop</span>
         {thresholdMsg && <span className="threshold-msg">{thresholdMsg}</span>}
       </div>
 

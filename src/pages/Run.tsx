@@ -337,7 +337,7 @@ export default function Run() {
       )}
 
       {/* ── Final report ── */}
-      {isDone && report && <ReportView report={report} latencies={chartPts.map(p => p.lat)} />}
+      {isDone && report && <ReportView report={report} log={logBuf} latencies={chartPts.map(p => p.lat)} />}
     </div>
   )
 }

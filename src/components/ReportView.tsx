@@ -1,19 +1,48 @@
-import type { ReportData } from '../lib/types'
+import type { ReportData, LogEntry } from '../lib/types'
 import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
 import Histogram from './Histogram'
 import PercentileTable from './PercentileTable'
 import { useTestStore } from '../store/testStore'
+import { exportCSV, exportExcel } from '../lib/exporter'
 
-interface Props { report: ReportData; latencies?: number[] }
+interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[] }
 
-export default function ReportView({ report, latencies }: Props) {
+export default function ReportView({ report, log = [], latencies }: Props) {
   const { chartPts, tputPts } = useTestStore()
   const m = report.meta
   const sr = parseFloat(m.successRate)
   const srClass = sr >= 99 ? 'text-green' : sr >= 90 ? '' : 'text-red'
 
   const failEntries = Object.entries(report.failures)
+
+  function exportJson() {
+    const b = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'loadpulse-report.json'; a.click()
+  }
+
+  function copyMd() {
+    const rows = Object.entries(report.failures).map(([k, f]) => `| ${k} | ${f.count} | ${(f.count / m.total * 100).toFixed(1)}% |`).join('\n')
+    navigator.clipboard.writeText(`## LoadPulse Report\n**${m.method} ${m.url}**\n\n| Metric | Value |\n|---|---|\n| Total | ${m.total} |\n| Success | ${m.ok} (${m.successRate}%) |\n| Failed | ${m.fail} |\n| Req/s | ${m.rps} |\n| Avg | ${m.avgLatMs}ms |\n| p95 | ${m.p95Ms}ms |\n| p99 | ${m.p99Ms}ms |\n\n### Failures\n| Reason | Count | % |\n|---|---|---|\n${rows || '| — | 0 | 0% |'}`)
+  }
+
+  function handleCSV() {
+    if (log.length) {
+      exportCSV(log.map(e => ({
+        time: e.t,
+        status: e.status ?? 'ERR',
+        latency_ms: e.lat,
+        ok: e.ok ? 'yes' : 'no',
+        message: e.msg,
+      })), 'loadpulse-log.csv')
+    } else {
+      exportCSV([{
+        url: m.url, method: m.method, total: m.total, ok: m.ok, fail: m.fail,
+        success_rate: m.successRate + '%', rps: m.rps, avg_ms: m.avgLatMs,
+        p95_ms: m.p95Ms, p99_ms: m.p99Ms, max_ms: m.maxLatMs,
+      }], 'loadpulse-summary.csv')
+    }
+  }
 
   return (
     <div>
@@ -102,6 +131,13 @@ export default function ReportView({ report, latencies }: Props) {
           ))}
         </div>
       )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
+        <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>
+        <button className="btn btn-ghost" onClick={handleCSV}>↓ CSV</button>
+        <button className="btn btn-ghost" onClick={() => exportExcel(log, report, 'loadpulse-report.xlsx')}>↓ Excel (.xlsx)</button>
+      </div>
     </div>
   )
 }

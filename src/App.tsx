@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import Run from './pages/Run'
 import History from './pages/History'
 import Compare from './pages/Compare'
+import Docs from './pages/Docs'
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -60,6 +61,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/" end className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Run</NavLink>
           <NavLink to="/history" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>History</NavLink>
           <NavLink to="/compare" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Compare</NavLink>
+          <NavLink to="/docs" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Docs</NavLink>
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <button
@@ -83,6 +85,7 @@ export default function App() {
         <Route path="/" element={<Layout><Run /></Layout>} />
         <Route path="/history" element={<Layout><History /></Layout>} />
         <Route path="/compare" element={<Layout><Compare /></Layout>} />
+        <Route path="/docs" element={<Layout><Docs /></Layout>} />
       </Routes>
       <InstallBanner />
     </BrowserRouter>

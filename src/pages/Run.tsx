@@ -5,6 +5,7 @@ import { describeTest } from '../lib/loadPatterns'
 import type { ParsedCurl, PatternType, StepConfig, TestConfig } from '../lib/types'
 
 import CurlInput from '../components/CurlInput'
+import PostmanImport from '../components/PostmanImport'
 import PatternPicker from '../components/PatternPicker'
 import StepEditor from '../components/StepEditor'
 import SuccessCriteria from '../components/SuccessCriteria'
@@ -63,6 +64,7 @@ export default function Run() {
   const [chainStatus, setChainStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [chainVars, setChainVars] = useState<Record<string, string>>({})
   const [showChain, setShowChain] = useState(false)
+  const [showPostman, setShowPostman] = useState(false)
 
   const { running, status, stats, chartPts, tputPts, logBuf, progressPct, report, thresholdMsg } = useTestStore()
   const { startTest, stopTest, reset } = useTestStore()
@@ -143,8 +145,24 @@ export default function Run() {
 
       {/* ── cURL ── */}
       <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div />
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowPostman(true)} title="Import from Postman">
+            📦 Import from Postman
+          </button>
+        </div>
         <CurlInput onParsed={setParsed} />
       </div>
+
+      {showPostman && (
+        <PostmanImport
+          onSelect={curl => {
+            window.dispatchEvent(new CustomEvent('loadpulse:setcurl', { detail: curl }))
+            try { setParsed(parseCurl(curl)) } catch { /* ignore */ }
+          }}
+          onClose={() => setShowPostman(false)}
+        />
+      )}
 
       {/* ── Config row: pattern + criteria ── */}
       <div className="config-row">

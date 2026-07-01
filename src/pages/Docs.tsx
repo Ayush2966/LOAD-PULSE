@@ -26,6 +26,7 @@ export default function Docs() {
             ['#history', '10. History & Compare'],
             ['#shortcuts', '11. Keyboard Shortcuts'],
             ['#presets', '12. Presets'],
+            ['#apdex', '13. Apdex & SLA'],
             ['#sharing', '13. Sharing Reports'],
           ].map(([href, label]) => (
             <a key={href} href={href} className="docs-toc-link">{label}</a>
@@ -386,6 +387,65 @@ export default function Docs() {
         </div>
       </section>
 
+      {/* 13. Apdex & SLA */}
+      <section id="apdex" className="docs-section">
+        <h2 className="docs-h2">13. Apdex Score & SLA Checker</h2>
+        <p className="docs-p">After a test completes, LoadPulse automatically calculates an <strong>Apdex score</strong> and runs your <strong>SLA rules</strong> against the results. Both panels appear in the Final Report section.</p>
+
+        <h3 className="docs-h3">Apdex Score</h3>
+        <p className="docs-p">Apdex (Application Performance Index) converts latency data into a single 0–1 score by classifying every request into one of three buckets relative to a target threshold T.</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Bucket</th><th>Condition</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Satisfied</strong></td><td>latency ≤ T</td><td>Fast enough — user is happy</td></tr>
+              <tr><td><strong>Tolerating</strong></td><td>T &lt; latency ≤ 4T</td><td>Slow but acceptable</td></tr>
+              <tr><td><strong>Frustrated</strong></td><td>latency &gt; 4T</td><td>Too slow — bad user experience</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Formula</div>
+          <pre>{`Apdex = (Satisfied + Tolerating / 2) / Total
+
+Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
+  Apdex = (800 + 75) / 1000 = 0.875  →  "Good"`}</pre>
+        </div>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Score range</th><th>Rating</th><th>Interpretation</th></tr></thead>
+            <tbody>
+              <tr><td>0.94 – 1.00</td><td><strong style={{ color: '#2ea043' }}>Excellent</strong></td><td>Virtually all users are satisfied</td></tr>
+              <tr><td>0.85 – 0.93</td><td><strong style={{ color: '#388bfd' }}>Good</strong></td><td>Most users are satisfied</td></tr>
+              <tr><td>0.70 – 0.84</td><td><strong style={{ color: '#d29922' }}>Fair</strong></td><td>A notable portion is experiencing slow responses</td></tr>
+              <tr><td>0.50 – 0.69</td><td><strong style={{ color: '#f85149' }}>Poor</strong></td><td>Many users are frustrated</td></tr>
+              <tr><td>0.00 – 0.49</td><td><strong style={{ color: '#b91c1c' }}>Unacceptable</strong></td><td>Most users are having a bad experience</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="docs-callout">
+          <span className="docs-callout-icon">💡</span>
+          <span>The default T is <strong>500ms</strong>. You can adjust it in the report panel — try T=200ms for strict APIs or T=2000ms for batch endpoints. The score recalculates live.</span>
+        </div>
+
+        <h3 className="docs-h3">SLA Checker</h3>
+        <p className="docs-p">The SLA panel runs a set of configurable pass/fail rules against the test results. Each rule compares a metric to a threshold you define.</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Metric</th><th>Default rule</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Success rate</strong></td><td>≥ 99%</td><td>% of requests matching your success criteria</td></tr>
+              <tr><td><strong>p95 latency</strong></td><td>≤ 1000ms</td><td>95th percentile response time</td></tr>
+              <tr><td><strong>p99 latency</strong></td><td>≤ 2000ms</td><td>Tail latency — worst-case for 1 in 100 users</td></tr>
+              <tr><td><strong>Apdex score</strong></td><td>≥ 0.85</td><td>Computed at the current T threshold</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="docs-p">Click the threshold number next to any rule to edit it inline. The overall badge shows <strong>✓ ALL PASS</strong> (green) or <strong>N/M PASS</strong> (red) so you can instantly see if you hit your SLA targets.</p>
+        <div className="docs-callout">
+          <span className="docs-callout-icon">💡</span>
+          <span>SLA rules are local to the report view and reset each session. To save a custom SLA profile, export the report as JSON and re-load it from History.</span>
+        </div>
       {/* 13. Sharing Reports */}
       <section id="sharing" className="docs-section">
         <h2 className="docs-h2">13. Sharing Reports</h2>

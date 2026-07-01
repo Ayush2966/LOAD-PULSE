@@ -3,6 +3,7 @@ import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
 import Histogram from './Histogram'
 import PercentileTable from './PercentileTable'
+import ApdexCard from './ApdexCard'
 import { useTestStore } from '../store/testStore'
 import { exportCSV, exportExcel } from '../lib/exporter'
 
@@ -110,6 +111,19 @@ export default function ReportView({ report, log = [], latencies }: Props) {
       {latencies && latencies.length > 0 && (
         <div className="card mb-16">
           <PercentileTable latencies={latencies} />
+        </div>
+      )}
+
+      {latencies && latencies.length > 0 && (
+        <div className="card mb-16">
+          <div className="card-title mb-12">Apdex Score & SLA</div>
+          <ApdexCard
+            latencies={latencies}
+            successRate={parseFloat(m.successRate)}
+            avg={m.avgLatMs}
+            p95={m.p95Ms}
+            p99={m.p99Ms}
+          />
         </div>
       )}
 

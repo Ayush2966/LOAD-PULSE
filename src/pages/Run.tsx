@@ -9,6 +9,7 @@ import PatternPicker from '../components/PatternPicker'
 import StepEditor from '../components/StepEditor'
 import SuccessCriteria from '../components/SuccessCriteria'
 import Presets from '../components/Presets'
+import ChainBuilder from '../components/ChainBuilder'
 import LiveStats from '../components/LiveStats'
 import ProgressBar from '../components/ProgressBar'
 import StatusDist from '../components/StatusDist'
@@ -17,6 +18,8 @@ import ReportView from '../components/ReportView'
 import LatencyChart from '../components/LatencyChart'
 import ThroughputChart from '../components/ThroughputChart'
 import { parseCurl } from '../lib/curlParser'
+import { runChain, applyChainVarsToString } from '../lib/chainExecutor'
+import type { ChainStep } from '../lib/chainExecutor'
 
 interface FormState {
   constRate: number; constRateUnit: 's' | 'm'; constDur: number; constDurUnit: 's' | 'm'
@@ -56,6 +59,10 @@ export default function Run() {
   const [pattern, setPattern] = useState<PatternType>('constant')
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [showCriteria, setShowCriteria] = useState(false)
+  const [chainSteps, setChainSteps] = useState<ChainStep[]>([])
+  const [chainStatus, setChainStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [chainVars, setChainVars] = useState<Record<string, string>>({})
+  const [showChain, setShowChain] = useState(false)
 
   const { running, status, stats, chartPts, tputPts, logBuf, progressPct, report, thresholdMsg } = useTestStore()
   const { startTest, stopTest, reset } = useTestStore()
@@ -75,10 +82,34 @@ export default function Run() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status])
 
-  function handleStart() {
+  async function handleStart() {
     if (!parsed) return
     reset()
-    startTest(buildConfig(parsed, pattern, form), pattern)
+
+    let vars: Record<string, string> = {}
+    const stepsToRun = chainSteps.filter(s => s.curl.trim())
+    if (stepsToRun.length > 0) {
+      setChainStatus('running')
+      try {
+        vars = await runChain(stepsToRun)
+        setChainVars(vars)
+        setChainStatus('done')
+      } catch {
+        setChainStatus('error')
+        return
+      }
+    }
+
+    const patchedParsed: ParsedCurl = {
+      ...parsed,
+      url: applyChainVarsToString(parsed.url, vars),
+      headers: Object.fromEntries(
+        Object.entries(parsed.headers).map(([k, v]) => [k, applyChainVarsToString(v, vars)])
+      ),
+      body: parsed.body ? applyChainVarsToString(parsed.body, vars) : null,
+    }
+
+    startTest(buildConfig(patchedParsed, pattern, form), pattern)
   }
 
   const desc = parsed ? describeTest(pattern, buildConfig(parsed, pattern, form), form.steps) : ''
@@ -210,6 +241,35 @@ export default function Run() {
       {/* ── Presets ── */}
       <div className="card">
         <Presets onSelect={handlePreset} />
+      </div>
+
+      {/* ── Request Chaining ── */}
+      <div className="card">
+        <button className="card-title criteria-toggle" onClick={() => setShowChain(s => !s)}>
+          Request Chaining <span className="criteria-chevron">{showChain ? '▲' : '▼'}</span>
+        </button>
+        {!showChain && chainSteps.length > 0 && (
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
+            {chainSteps.filter(s => s.curl.trim()).length} setup step(s) configured
+            {Object.keys(chainVars).length > 0 && ` · ${Object.keys(chainVars).length} var(s) extracted`}
+          </div>
+        )}
+        {showChain && (
+          <div style={{ marginTop: 12 }}>
+            <ChainBuilder steps={chainSteps} onChange={setChainSteps} />
+            {chainStatus === 'running' && (
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)' }}>⏳ Running chain steps…</div>
+            )}
+            {chainStatus === 'done' && Object.keys(chainVars).length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 11, color: '#2ea043', fontFamily: 'var(--font-mono)' }}>
+                ✓ Extracted: {Object.entries(chainVars).map(([k, v]) => `chain.${k}=${v.slice(0, 20)}`).join('  ·  ')}
+              </div>
+            )}
+            {chainStatus === 'error' && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149' }}>✗ Chain step failed — check the cURL commands</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Action bar ── */}

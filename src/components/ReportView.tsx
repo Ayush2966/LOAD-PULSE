@@ -3,8 +3,10 @@ import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
 import Histogram from './Histogram'
 import PercentileTable from './PercentileTable'
+import ApdexCard from './ApdexCard'
 import { useTestStore } from '../store/testStore'
 import { exportCSV, exportExcel } from '../lib/exporter'
+import { buildShareUrl } from '../lib/shareReport'
 
 interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[] }
 
@@ -113,6 +115,19 @@ export default function ReportView({ report, log = [], latencies }: Props) {
         </div>
       )}
 
+      {latencies && latencies.length > 0 && (
+        <div className="card mb-16">
+          <div className="card-title mb-12">Apdex Score & SLA</div>
+          <ApdexCard
+            latencies={latencies}
+            successRate={parseFloat(m.successRate)}
+            avg={m.avgLatMs}
+            p95={m.p95Ms}
+            p99={m.p99Ms}
+          />
+        </div>
+      )}
+
       {failEntries.length > 0 && (
         <div>
           <div className="card-title mb-8">Failure Breakdown</div>
@@ -133,6 +148,15 @@ export default function ReportView({ report, log = [], latencies }: Props) {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary btn-sm" onClick={(e) => {
+          const url = buildShareUrl(report)
+          navigator.clipboard.writeText(url).then(() => {
+            const btn = e.currentTarget as HTMLButtonElement
+            const orig = btn.textContent
+            btn.textContent = '✓ Copied!'
+            setTimeout(() => { btn.textContent = orig }, 2000)
+          })
+        }}>🔗 Share Report</button>
         <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
         <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>
         <button className="btn btn-ghost" onClick={handleCSV}>↓ CSV</button>

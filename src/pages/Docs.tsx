@@ -27,8 +27,9 @@ export default function Docs() {
             ['#shortcuts', '11. Keyboard Shortcuts'],
             ['#presets', '12. Presets'],
             ['#postman', '13. Postman Import'],
-            ['#apdex', '13. Apdex & SLA'],
-            ['#sharing', '13. Sharing Reports'],
+            ['#apdex', '14. Apdex & SLA'],
+            ['#sharing', '15. Sharing Reports'],
+            ['#cli', '16. CI / CLI Mode'],
           ].map(([href, label]) => (
             <a key={href} href={href} className="docs-toc-link">{label}</a>
           ))}
@@ -503,6 +504,205 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
               <tr><td><strong>Route</strong></td><td>Shared reports open at <code>/report#data=…</code> — a clean standalone view with an "Open LoadPulse" link.</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* 16. CI / CLI Mode */}
+      <section id="cli" className="docs-section">
+        <h2 className="docs-h2">16. CI / CLI Mode</h2>
+        <p className="docs-p">Run LoadPulse as a command-line tool to gate deploys on performance. It uses the same engine as the UI — identical load patterns, latency math, and success criteria — with a clean terminal output and a non-zero exit code when any SLA is breached.</p>
+
+        <div className="docs-callout">
+          <span className="docs-callout-icon">💡</span>
+          <span>Design a test in the UI, then click <strong>⬇ Export Config</strong> in the action bar to download a <code>loadpulse.json</code> ready for the CLI.</span>
+        </div>
+
+        <h3 className="docs-h3">Installation</h3>
+        <p className="docs-p">The CLI is published on npm. Install it globally once — works on any machine with Node 18+.</p>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Install globally</div>
+          <pre>{`npm install -g loadpulse`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Verify</div>
+          <pre>{`loadpulse --help`}</pre>
+        </div>
+        <div className="docs-callout">
+          <span className="docs-callout-icon">📦</span>
+          <span>Published at <strong>npmjs.com/package/loadpulse</strong> — no TypeScript, no build step, no repo clone needed. Just Node 18+.</span>
+        </div>
+
+        <h3 className="docs-h3">Running a test</h3>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Quick one-liner</div>
+          <pre>{`loadpulse run \\
+  --curl "curl https://api.example.com/health" \\
+  --rate 20 --duration 60 \\
+  --fail-under 99 --p95-under 500`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Using a config file</div>
+          <pre>{`loadpulse run loadpulse.json`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Config file (loadpulse.json)</div>
+          <pre>{`{
+  "curl": "curl -X POST https://api.example.com/users \\\\
+    -H \\"Authorization: Bearer TOKEN\\" \\\\
+    -d '{\\"email\\": \\"test@example.com\\"}'",
+  "pattern": "constant",
+  "rate": 20,
+  "duration": 60,
+  "concurrency": 25,
+  "timeout": 5000,
+  "statusMin": 200,
+  "statusMax": 201,
+  "gates": {
+    "failUnder": 99,
+    "p95Under": 400,
+    "p99Under": 800
+  }
+}`}</pre>
+        </div>
+
+        <h3 className="docs-h3">CI integration</h3>
+        <div className="docs-code-block">
+          <div className="docs-code-label">GitHub Actions example</div>
+          <pre>{`- name: Install loadpulse
+  run: npm install -g loadpulse
+
+- name: Load test
+  run: loadpulse run loadpulse.json
+  # exits 1 if any gate fails → CI step fails automatically
+
+- name: Load test (JSON report as artifact)
+  run: loadpulse run loadpulse.json --json > report.json
+- uses: actions/upload-artifact@v4
+  with:
+    name: load-report
+    path: report.json`}</pre>
+        </div>
+
+        <h3 className="docs-h3">Updating</h3>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Install latest version</div>
+          <pre>{`npm install -g loadpulse@latest`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Uninstall</div>
+          <pre>{`npm uninstall -g loadpulse`}</pre>
+        </div>
+
+        <h3 className="docs-h3">All commands</h3>
+
+        <div className="docs-code-block">
+          <div className="docs-code-label">Syntax</div>
+          <pre>{`loadpulse run [config.json] [flags]`}</pre>
+        </div>
+
+        <p className="docs-p" style={{ marginTop: 16 }}><strong>Input flags</strong> — tell loadpulse what to test:</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>--curl &lt;string&gt;</code></td><td>—</td><td>cURL command to run. Required if no config file is passed.</td></tr>
+              <tr><td><code>--config &lt;path&gt;</code></td><td>—</td><td>Path to a <code>loadpulse.json</code> config file. Can also be passed as a positional argument.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="docs-p" style={{ marginTop: 16 }}><strong>Load pattern flags</strong> — control how traffic is shaped:</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>--pattern &lt;type&gt;</code></td><td><code>constant</code></td><td>Load pattern: <code>constant</code> · <code>ramp</code> · <code>step</code> · <code>spike</code> · <code>soak</code></td></tr>
+              <tr><td><code>--rate &lt;n&gt;</code></td><td><code>10</code></td><td>Requests per second (constant / soak / spike peak)</td></tr>
+              <tr><td><code>--duration &lt;n&gt;</code></td><td><code>30</code></td><td>How long to run the test, in seconds</td></tr>
+              <tr><td><code>--concurrency &lt;n&gt;</code></td><td><code>20</code></td><td>Max requests in flight at the same time</td></tr>
+              <tr><td><code>--timeout &lt;ms&gt;</code></td><td><code>10000</code></td><td>Per-request timeout in milliseconds. Timed-out requests count as failures.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="docs-p" style={{ marginTop: 16 }}><strong>Success criteria flags</strong> — what counts as a passing request:</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Flag / config key</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>statusMin</code></td><td><code>200</code></td><td>Minimum HTTP status code to treat as success (config file only)</td></tr>
+              <tr><td><code>statusMax</code></td><td><code>299</code></td><td>Maximum HTTP status code to treat as success (config file only)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="docs-p" style={{ marginTop: 16 }}><strong>Gate flags</strong> — fail the test (exit 1) if a threshold is breached:</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>--fail-under &lt;pct&gt;</code></td><td>Exit 1 if success rate is below <em>n</em>%. E.g. <code>--fail-under 99</code> requires 99% of requests to succeed.</td></tr>
+              <tr><td><code>--p95-under &lt;ms&gt;</code></td><td>Exit 1 if the P95 latency exceeds <em>n</em> ms.</td></tr>
+              <tr><td><code>--p99-under &lt;ms&gt;</code></td><td>Exit 1 if the P99 latency exceeds <em>n</em> ms.</td></tr>
+              <tr><td><code>--avg-under &lt;ms&gt;</code></td><td>Exit 1 if the average latency exceeds <em>n</em> ms.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="docs-p" style={{ marginTop: 16 }}><strong>Output flags</strong> — control what gets printed:</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>--json</code></td><td>Print the final report as JSON to <strong>stdout</strong>. Progress bar and stats go to <strong>stderr</strong> so they don't pollute pipes.</td></tr>
+              <tr><td><code>--quiet</code></td><td>Suppress all terminal output. Combine with <code>--json</code> to get only the raw JSON report.</td></tr>
+              <tr><td><code>--help</code> / <code>-h</code></td><td>Print the full usage reference and exit.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="docs-h3">Exit codes</h3>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead><tr><th>Code</th><th>When</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>0</code></td><td>Always when no gates set; or all gates passed</td><td>Test passed — safe to deploy</td></tr>
+              <tr><td><code>1</code></td><td>One or more gate thresholds were breached</td><td>Test failed — block the deploy</td></tr>
+              <tr><td><code>2</code></td><td>Bad config, unparseable cURL, missing flags</td><td>Setup error — fix the command</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="docs-h3">All examples</h3>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Minimal — just check the endpoint is up</div>
+          <pre>{`loadpulse run --curl "curl https://api.example.com/health"`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Gate on success rate and P95</div>
+          <pre>{`loadpulse run --curl "curl https://api.example.com/users" \\
+  --rate 50 --duration 60 --fail-under 99 --p95-under 300`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Ramp pattern — gradually increase to 100 req/s over 2 minutes</div>
+          <pre>{`loadpulse run --curl "curl https://api.example.com/search" \\
+  --pattern ramp --rate 100 --duration 120 --fail-under 99`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Config file — full options including auth headers</div>
+          <pre>{`loadpulse run loadpulse.json --p95-under 500`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Save report to file</div>
+          <pre>{`loadpulse run loadpulse.json --json > report.json`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Silent mode — only JSON output, no terminal noise</div>
+          <pre>{`loadpulse run loadpulse.json --json --quiet > report.json`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Print help</div>
+          <pre>{`loadpulse --help`}</pre>
         </div>
       </section>
 

@@ -1,11 +1,23 @@
 {
-  "name": "api-load-tester",
-  "private": true,
-  "version": "0.0.0",
+  "name": "loadpulse",
+  "version": "1.0.0",
+  "description": "CLI load testing tool — run from the terminal, gate deploys on SLA",
   "type": "module",
+  "bin": {
+    "loadpulse": "dist-cli/loadpulse.mjs"
+  },
+  "files": [
+    "dist-cli/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:cli": "esbuild cli/index.ts --bundle --platform=node --target=node18 --outfile=dist-cli/loadpulse.mjs --format=esm && chmod +x dist-cli/loadpulse.mjs",
+    "prepare": "npm run build:cli",
+    "loadpulse": "tsx cli/index.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -21,7 +33,9 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "esbuild": "^0.28.0",
     "oxlint": "^1.71.0",
+    "tsx": "^4.19.4",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vite-plugin-pwa": "^1.3.0"

@@ -18,6 +18,7 @@ import LogFeed from '../components/LogFeed'
 import ReportView from '../components/ReportView'
 import LatencyChart from '../components/LatencyChart'
 import ThroughputChart from '../components/ThroughputChart'
+import ExportConfigButton from '../components/ExportConfigButton'
 import { parseCurl } from '../lib/curlParser'
 import { runChain, applyChainVarsToString } from '../lib/chainExecutor'
 import type { ChainStep } from '../lib/chainExecutor'
@@ -320,6 +321,7 @@ export default function Run() {
           <button className="btn btn-ghost" onClick={reset}>Reset</button>
         )}
         {!parsed && <span className="action-hint">Paste a cURL command above to start</span>}
+        {parsed && <ExportConfigButton parsed={parsed} pattern={pattern} form={form} />}
         <span className="action-hint" style={{ fontSize: 11, marginLeft: 'auto' }}>⌘↵ run · Esc stop</span>
         {thresholdMsg && <span className="threshold-msg">{thresholdMsg}</span>}
       </div>

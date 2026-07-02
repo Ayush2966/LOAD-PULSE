@@ -5,6 +5,7 @@ import History from './pages/History'
 import Compare from './pages/Compare'
 import Docs from './pages/Docs'
 import SharedReport from './pages/SharedReport'
+import Swarm from './pages/Swarm'
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -62,6 +63,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/" end className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Run</NavLink>
           <NavLink to="/history" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>History</NavLink>
           <NavLink to="/compare" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Compare</NavLink>
+          <NavLink to="/swarm" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>🐝 Swarm</NavLink>
           <NavLink to="/docs" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Docs</NavLink>
         </div>
         <div style={{ marginLeft: 'auto' }}>
@@ -86,6 +88,7 @@ export default function App() {
         <Route path="/" element={<Layout><Run /></Layout>} />
         <Route path="/history" element={<Layout><History /></Layout>} />
         <Route path="/compare" element={<Layout><Compare /></Layout>} />
+        <Route path="/swarm" element={<Layout><Swarm /></Layout>} />
         <Route path="/docs" element={<Layout><Docs /></Layout>} />
         <Route path="/report" element={<SharedReport />} />
       </Routes>

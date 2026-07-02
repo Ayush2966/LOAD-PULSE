@@ -3,6 +3,39 @@
 ## 1. High-level architecture
 LoadPulse has **no backend**. Two entry points share the same core load-engine logic:
 
+```mermaid
+flowchart TB
+    subgraph Core["Shared core (src/lib)"]
+        LP[loadPatterns.ts]
+        FE[fetcher.ts]
+        AP[apdex.ts / percentile.ts]
+        CE[chainExecutor.ts]
+        VI[variableInjector.ts]
+        TY[types.ts — contracts]
+    end
+
+    subgraph Web["Web App (browser)"]
+        RC[React + Zustand]
+        PG[src/pages]
+        CP[src/components]
+        ST[src/store]
+    end
+
+    subgraph CLI["CLI (Node 18+)"]
+        IDX[cli/index.ts]
+        RUN[cli/runner.ts]
+        CFG[cli/config.ts]
+        PR[cli/printer.ts]
+    end
+
+    Target[(Target API under test)]
+
+    Core --> Web
+    Core --> CLI
+    Web --> Target
+    CLI --> Target
+```
+
 ```
                 ┌───────────────────────┐
                 │   Shared core (lib)    │

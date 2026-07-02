@@ -7,7 +7,41 @@
 (shared report)  → URL-encoded report view (no route storage, state in URL hash/query)
 ```
 
-## 2. Test Builder page — section hierarchy
+## 2. Test Builder page — section hierarchy (diagram)
+```mermaid
+flowchart TD
+    TB[Test Builder]
+    TB --> IMP[1. Import]
+    IMP --> IMP1[Paste cURL]
+    IMP --> IMP2[Import Postman collection]
+
+    TB --> LP[2. Load Pattern config]
+    LP --> LP1[Constant]
+    LP --> LP2[Ramp]
+    LP --> LP3[Step]
+    LP --> LP4[Spike]
+    LP --> LP5[Soak]
+
+    TB --> SC[3. Success Criteria]
+    SC --> SC1[Status code range]
+    SC --> SC2[Latency threshold]
+    SC --> SC3[Body keyword check]
+    SC --> SC4[Auto-stop on error rate]
+
+    TB --> CH["4. Chaining (optional)"]
+    CH --> CH1[Auth step → extract variable → inject]
+
+    TB --> RUN[5. Run controls]
+    TB --> RES[6. Results]
+    RES --> RES1[Live latency chart]
+    RES --> RES2[Throughput chart]
+    RES --> RES3[Status code distribution]
+    RES --> RES4[Apdex / SLA summary]
+    RES --> RES5[Failure groups]
+    RES --> RES6[Export: Config JSON / Report JSON / Share URL]
+```
+
+## 2b. Test Builder page — section hierarchy (text)
 ```
 Test Builder
 ├── 1. Import

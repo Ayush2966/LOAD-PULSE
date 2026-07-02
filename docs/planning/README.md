@@ -11,5 +11,6 @@ Index of planning/architecture docs for this project. Written to match the actua
 7. [Test Plan](07-test-plan.md) — unit/integration coverage priorities, release regression checklist
 8. [CI/CD & Release Plan](08-ci-cd-release-plan.md) — build artifacts, versioning, rollback
 9. [CLI Design Spec](09-cli-design.md) — flags, exit codes, config file, CI contract
+10. [Project Build History](10-project-build-history.md) — how the repo/CLI-CI mode was built, git history, local Desktop setup
 
 **Not included** (intentionally skipped — see reasoning in-chat): DB design, auth/compliance plan, server infra/scalability plan — LoadPulse is a no-backend, client-side tool.

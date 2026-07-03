@@ -6,6 +6,7 @@ import PatternPicker from '../components/PatternPicker'
 import ProgressBar from '../components/ProgressBar'
 import ThroughputChart from '../components/ThroughputChart'
 import StatusDist from '../components/StatusDist'
+import QrCode from '../components/QrCode'
 
 const DEFAULT_FORM = {
   constRate: 10, constRateUnit: 's' as const, constDur: 30, constDurUnit: 's' as const,
@@ -94,9 +95,15 @@ export default function Swarm() {
       {role === 'host' && status === 'waiting' && (
         <div className="card">
           <div className="card-title">Room ready — share this with your swarm</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-            <code style={{ fontSize: 20, padding: '6px 12px', background: 'var(--bg2)', borderRadius: 6 }}>{roomId}</code>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(joinUrl)}>Copy link</button>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <code style={{ fontSize: 20, padding: '6px 12px', background: 'var(--bg2)', borderRadius: 6 }}>{roomId}</code>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(joinUrl)}>Copy link</button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>📱 Scan the QR to join from a phone or another device</div>
+            </div>
+            <QrCode value={joinUrl} />
           </div>
           <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>
             {nodeCount - 1} node(s) joined (plus you, the host). Start whenever ready — each joined device gets an equal share of the configured rate.

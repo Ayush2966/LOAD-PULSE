@@ -22,7 +22,7 @@ const DEFAULT_FORM = {
 }
 
 export default function Swarm() {
-  const { role, roomId, status, errorMsg, nodes, agg, tputPts, progressPct, startHost, startTestOnHost, joinRoom, leave } = useSwarmStore()
+  const { role, roomId, status, errorMsg, nodes, agg, tputPts, progressPct, startHost, startTestOnHost, joinRoom, leave, exportReport } = useSwarmStore()
   const [parsed, setParsed] = useState<ParsedCurl | null>(null)
   const [pattern, setPattern] = useState<PatternType>('constant')
   const [joinCode, setJoinCode] = useState('')
@@ -133,7 +133,12 @@ export default function Swarm() {
           {role === 'host' && (
             <>
               <div className="card">
-                <div className="card-title">Aggregated stats (all nodes)</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="card-title">Aggregated stats (all nodes)</div>
+                  <button className="btn btn-ghost btn-sm" onClick={exportReport} title="Download swarm report as JSON">
+                    ⬇ Export Report
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: 24, marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                   <span>Sent: {summary.sent}</span>
                   <span>OK: {summary.ok}</span>

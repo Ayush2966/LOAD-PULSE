@@ -32,6 +32,7 @@ interface SwarmState {
   startTestOnHost: () => void
   joinRoom: (roomId: string) => void
   leave: () => void
+  exportReport: () => void
 }
 
 let hostHandle: HostHandle | null = null
@@ -177,6 +178,12 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
       nodes: {}, agg: emptyAgg(), tputPts: [], startedAt: 0, totalMs: 0, progressPct: 0,
     })
   },
+
+  exportReport() {
+    const report = buildSwarmReport(get(), hostCfg, hostPattern)
+    if (!report) return
+    downloadSwarmReport(report)
+  },
 }))
 
 function handleIncoming(
@@ -223,4 +230,69 @@ export function swarmSummary(agg: AggStats) {
     p95: percentile(agg.latencies, 95),
     p99: percentile(agg.latencies, 99),
   }
+}
+
+/**
+ * Swarm report JSON. Mirrors the solo/CLI ReportData.meta shape so tooling can
+ * read either, and adds swarm-specific fields: nodeCount and a per-node
+ * breakdown. Failures aren't grouped by reason (swarm samples carry status
+ * codes, not reason strings), so a statusCodes distribution is included instead.
+ */
+export interface SwarmReport {
+  meta: {
+    url: string; method: string; pattern: string
+    elapsed: string; rps: string
+    total: number; ok: number; fail: number
+    successRate: string
+    avgLatMs: number; p95Ms: number; p99Ms: number; maxLatMs: number
+    nodeCount: number
+  }
+  nodes: Array<{ label: string; sent: number; ok: number; fail: number; connected: boolean }>
+  statusCodes: Record<number, number>
+}
+
+export function buildSwarmReport(
+  state: SwarmState,
+  cfg: TestConfig | null,
+  pattern: PatternType | null,
+): SwarmReport | null {
+  if (state.role !== 'host' || (state.status !== 'done' && state.status !== 'running')) return null
+  const { agg } = state
+  const s = swarmSummary(agg)
+  const elapsedSec = state.totalMs / 1000
+  const nodeEntries = Object.values(state.nodes)
+  const nodeCount = nodeEntries.filter(n => n.connected || n.nodeId === 'host-self').length
+  return {
+    meta: {
+      url: cfg?.parsed.url ?? '',
+      method: cfg?.parsed.method ?? '',
+      pattern: pattern ?? '',
+      elapsed: elapsedSec.toFixed(2),
+      rps: (agg.sent / Math.max(0.1, elapsedSec)).toFixed(2),
+      total: agg.sent,
+      ok: agg.ok,
+      fail: agg.fail,
+      successRate: s.successRate,
+      avgLatMs: s.avg,
+      p95Ms: s.p95,
+      p99Ms: s.p99,
+      maxLatMs: agg.latencies.length ? Math.max(...agg.latencies) : 0,
+      nodeCount,
+    },
+    nodes: nodeEntries.map(n => ({
+      label: n.nodeId === 'host-self' ? 'host (you)' : n.nodeId,
+      sent: n.sent, ok: n.ok, fail: n.fail, connected: n.connected,
+    })),
+    statusCodes: agg.codes,
+  }
+}
+
+function downloadSwarmReport(report: SwarmReport, filename = 'loadpulse-swarm-report.json'): void {
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }

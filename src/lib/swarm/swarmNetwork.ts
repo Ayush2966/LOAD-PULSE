@@ -1,7 +1,24 @@
-import Peer, { type DataConnection } from 'peerjs'
+import Peer, { type DataConnection, type PeerOptions } from 'peerjs'
 import type { SwarmMessage } from './types'
 
 const ROOM_PREFIX = 'loadpulse-swarm-'
+
+/**
+ * STUN alone can't traverse symmetric NATs / restrictive corporate firewalls —
+ * without a TURN relay, joiners behind those networks silently fail to connect.
+ * openrelay.metered.ca is a free public TURN service (shared demo credentials,
+ * rate-limited) — good enough to unblock most restrictive networks without
+ * requiring LoadPulse to run or pay for its own relay infrastructure.
+ */
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:openrelay.metered.ca:80' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+]
+
+const PEER_OPTIONS: PeerOptions = { config: { iceServers: ICE_SERVERS } }
 
 export function roomIdToPeerId(roomId: string): string {
   return `${ROOM_PREFIX}${roomId.trim().toLowerCase()}`
@@ -26,7 +43,7 @@ export function hostSwarm(
   onMessage: (nodeId: string, msg: SwarmMessage) => void,
   onError: (err: Error) => void,
 ): HostHandle {
-  const peer = new Peer(roomIdToPeerId(roomId))
+  const peer = new Peer(roomIdToPeerId(roomId), PEER_OPTIONS)
   const connections = new Map<string, DataConnection>()
 
   peer.on('error', err => onError(err as unknown as Error))
@@ -68,7 +85,7 @@ export function joinSwarm(
   onClose: () => void,
   onError: (err: Error) => void,
 ): NodeHandle {
-  const peer = new Peer()
+  const peer = new Peer(PEER_OPTIONS)
   const handle: NodeHandle = {
     peer,
     conn: null,

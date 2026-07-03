@@ -7,6 +7,7 @@ import ProgressBar from '../components/ProgressBar'
 import ThroughputChart from '../components/ThroughputChart'
 import StatusDist from '../components/StatusDist'
 import QrCode from '../components/QrCode'
+import NodeLatencyBars from '../components/NodeLatencyBars'
 
 const DEFAULT_FORM = {
   constRate: 10, constRateUnit: 's' as const, constDur: 30, constDurUnit: 's' as const,
@@ -166,6 +167,11 @@ export default function Swarm() {
                   <div className="card-title">Status distribution</div>
                   <StatusDist codes={agg.codes} total={agg.sent} />
                 </div>
+              </div>
+
+              <div className="card">
+                <div className="card-title">Per-node latency</div>
+                <NodeLatencyBars nodes={Object.values(nodes)} />
               </div>
 
               <div className="card">

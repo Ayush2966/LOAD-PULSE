@@ -36,4 +36,5 @@ export interface SwarmNodeState {
   sent: number
   ok: number
   fail: number
+  lat: number[]
 }

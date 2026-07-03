@@ -92,7 +92,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     hostHandle = hostSwarm(
       roomId,
       nodeId => {
-        set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0 } } }))
+        set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0, lat: [] } } }))
         // a node that joins mid-run has missed the original 'start' broadcast — catch it up directly
         if (get().status === 'running' && hostCfg && hostPattern) {
           const share = rebalanceHost(get)
@@ -198,9 +198,14 @@ function handleIncoming(
     const agg = mergeWindow(s.agg, msg)
     const nodes = { ...s.nodes }
     if (nodes[nodeId]) {
-      nodes[nodeId] = { ...nodes[nodeId], sent: nodes[nodeId].sent + msg.sent, ok: nodes[nodeId].ok + msg.ok, fail: nodes[nodeId].fail + msg.fail }
+      const prev = nodes[nodeId]
+      nodes[nodeId] = {
+        ...prev,
+        sent: prev.sent + msg.sent, ok: prev.ok + msg.ok, fail: prev.fail + msg.fail,
+        lat: [...prev.lat, ...msg.latencies].slice(-2000),
+      }
     } else if (nodeId === 'host-self') {
-      nodes[nodeId] = { nodeId, connected: true, sent: msg.sent, ok: msg.ok, fail: msg.fail }
+      nodes[nodeId] = { nodeId, connected: true, sent: msg.sent, ok: msg.ok, fail: msg.fail, lat: msg.latencies.slice(-2000) }
     }
 
     const startedAt = s.startedAt

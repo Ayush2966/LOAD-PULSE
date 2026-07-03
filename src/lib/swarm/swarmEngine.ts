@@ -14,24 +14,34 @@ export interface SwarmSampleWindow {
 
 const REPORT_INTERVAL_MS = 1000
 
+/** Mutable handle so the host can rebalance a node's share mid-run as nodes join/leave. */
+export interface ShareRef {
+  value: number
+}
+
 /**
  * Runs this node's slice of a swarm load test: same engine as the solo test
  * runner (loadPatterns + fetcher), but the target rate is scaled by
- * shareFraction so N nodes together approximate the full configured rate.
+ * shareRef.value so N nodes together approximate the full configured rate.
+ * shareRef is read on every tick, so the caller can mutate it live to
+ * rebalance as the swarm's node count changes.
  * Emits a batched sample window roughly once a second instead of per-request
  * chart points, since results travel over a WebRTC data channel.
  */
 export function runSwarmSlice(
   cfg: TestConfig,
   pattern: PatternType,
-  shareFraction: number,
+  shareRef: ShareRef,
   onSample: (w: SwarmSampleWindow) => void,
   signal: AbortSignal,
 ): Promise<void> {
   return new Promise(resolve => {
     const totalMs = getDurationMs(pattern, cfg)
-    const concur = Math.max(1, Math.round(getConcur(pattern, cfg) * shareFraction))
     const timeout = getTimeout(pattern, cfg)
+    // full concurrency ceiling per node — the tick-rate loop below is what actually
+    // enforces this node's share, so the semaphore cap doesn't need to shrink (and
+    // shouldn't, since shareRef.value can grow later via rebalancing)
+    const concur = getConcur(pattern, cfg)
     const sem = makeSemaphore(concur)
     const startTime = Date.now()
 
@@ -68,11 +78,11 @@ export function runSwarmSlice(
       win.latencies.push(result.lat)
     }
 
-    accum = getRps(pattern, 0, totalMs, cfg) * shareFraction * 0.1
+    accum = getRps(pattern, 0, totalMs, cfg) * shareRef.value * 0.1
     const tickH = setInterval(() => {
       if (stopped) return
       const el = Date.now() - startTime
-      const rps = getRps(pattern, el, totalMs, cfg) * shareFraction
+      const rps = getRps(pattern, el, totalMs, cfg) * shareRef.value
       accum += rps * 0.1
       let n = Math.floor(accum); accum -= n
       while (n-- > 0) void fireOne()

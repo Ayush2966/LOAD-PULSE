@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { TestConfig, PatternType, TputPoint } from '../lib/types'
 import { hostSwarm, joinSwarm, randomRoomId, type HostHandle, type NodeHandle } from '../lib/swarm/swarmNetwork'
-import { runSwarmSlice, type SwarmSampleWindow } from '../lib/swarm/swarmEngine'
+import { runSwarmSlice, type SwarmSampleWindow, type ShareRef } from '../lib/swarm/swarmEngine'
 import { getDurationMs } from '../lib/loadPatterns'
 import { percentile } from '../lib/percentile'
 import type { SwarmMessage, SwarmNodeState } from '../lib/swarm/types'
@@ -43,6 +43,17 @@ let hostPattern: PatternType | null = null
 let uiTimer: ReturnType<typeof setInterval> | null = null
 let lastTputSec = -1
 let tputAccum = 0
+let hostShareRef: ShareRef | null = null
+let nodeShareRef: ShareRef | null = null
+
+/** Recomputes each node's fair share from the current connected-node count and broadcasts it, so a node joining or leaving mid-run redistributes load instead of leaving stale shares. */
+function rebalanceHost(get: () => SwarmState): number {
+  const connectedRemote = Object.values(get().nodes).filter(n => n.nodeId !== 'host-self' && n.connected).length
+  const share = 1 / (connectedRemote + 1)
+  if (hostShareRef) hostShareRef.value = share
+  hostHandle?.broadcast({ kind: 'rebalance', shareFraction: share })
+  return share
+}
 
 function mergeWindow(agg: AggStats, w: SwarmSampleWindow): AggStats {
   const codes = { ...agg.codes }
@@ -79,8 +90,19 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
 
     hostHandle = hostSwarm(
       roomId,
-      nodeId => set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0 } } })),
-      nodeId => set(s => ({ nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } })),
+      nodeId => {
+        set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0 } } }))
+        // a node that joins mid-run has missed the original 'start' broadcast — catch it up directly
+        if (get().status === 'running' && hostCfg && hostPattern) {
+          const share = rebalanceHost(get)
+          const conn = hostHandle?.connections.get(nodeId)
+          if (conn?.open) conn.send({ kind: 'start', cfg: hostCfg, pattern: hostPattern, shareFraction: share })
+        }
+      },
+      nodeId => {
+        set(s => ({ nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } }))
+        if (get().status === 'running') rebalanceHost(get)
+      },
       (nodeId, msg) => handleIncoming(nodeId, msg, set, get),
       err => set({ status: 'error', errorMsg: err.message || 'Peer connection error' }),
     )
@@ -90,19 +112,21 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     if (!hostHandle || !hostCfg || !hostPattern) return
     const cfg = hostCfg
     const pattern = hostPattern
-    const nodeCount = Object.keys(get().nodes).length + 1 // +1 for the host itself
-    const share = 1 / nodeCount
+    const connectedRemote = Object.values(get().nodes).filter(n => n.connected).length
+    const share = 1 / (connectedRemote + 1) // +1 for the host itself
     const totalMs = getDurationMs(pattern, cfg)
     const startedAt = Date.now()
 
     set({ status: 'running', startedAt, totalMs, progressPct: 0, agg: emptyAgg(), tputPts: [] })
     hostHandle.broadcast({ kind: 'start', cfg, pattern, shareFraction: share })
 
+    hostShareRef = { value: share }
     hostAbort = new AbortController()
-    void runSwarmSlice(cfg, pattern, share, w => {
+    void runSwarmSlice(cfg, pattern, hostShareRef, w => {
       handleIncoming('host-self', { kind: 'sample', nodeId: 'host-self', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies }, set, get)
     }, hostAbort.signal).then(() => {
       set({ status: 'done', progressPct: 100 })
+      hostShareRef = null
     })
 
     uiTimer = setInterval(() => {
@@ -119,11 +143,17 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
       msg => {
         if (msg.kind === 'start') {
           set({ status: 'running', startedAt: Date.now(), totalMs: getDurationMs(msg.pattern, msg.cfg), progressPct: 0 })
+          nodeShareRef = { value: msg.shareFraction }
           nodeAbort = new AbortController()
-          void runSwarmSlice(msg.cfg, msg.pattern, msg.shareFraction, w => {
+          void runSwarmSlice(msg.cfg, msg.pattern, nodeShareRef, w => {
             nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies })
             set(s => ({ agg: mergeWindow(s.agg, w) }))
-          }, nodeAbort.signal).then(() => set({ status: 'done', progressPct: 100 }))
+          }, nodeAbort.signal).then(() => {
+            set({ status: 'done', progressPct: 100 })
+            nodeShareRef = null
+          })
+        } else if (msg.kind === 'rebalance') {
+          if (nodeShareRef) nodeShareRef.value = msg.shareFraction
         } else if (msg.kind === 'stop') {
           nodeAbort?.abort()
         }
@@ -140,6 +170,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     hostHandle?.close()
     nodeHandle?.close()
     hostHandle = null; nodeHandle = null; hostCfg = null; hostPattern = null
+    hostShareRef = null; nodeShareRef = null
     lastTputSec = -1; tputAccum = 0
     set({
       role: 'idle', roomId: '', status: 'idle', errorMsg: '',

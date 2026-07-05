@@ -28,6 +28,8 @@ export default function Swarm() {
   const [parsed, setParsed] = useState<ParsedCurl | null>(null)
   const [pattern, setPattern] = useState<PatternType>('constant')
   const [joinCode, setJoinCode] = useState('')
+  const [hostPass, setHostPass] = useState('')
+  const [joinPass, setJoinPass] = useState('')
 
   useEffect(() => () => { if (useSwarmStore.getState().role !== 'idle') leave() }, [])
 
@@ -45,7 +47,7 @@ export default function Swarm() {
   function handleHostStart() {
     if (!parsed) return
     const cfg: TestConfig = { parsed, pattern, ...DEFAULT_FORM }
-    startHost(cfg, pattern)
+    startHost(cfg, pattern, hostPass.trim())
   }
 
   return (
@@ -69,6 +71,16 @@ export default function Swarm() {
             <div style={{ marginTop: 12 }}>
               <PatternPicker value={pattern} onChange={setPattern} />
             </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Passcode (optional)</label>
+              <input
+                type="text"
+                value={hostPass}
+                onChange={e => setHostPass(e.target.value)}
+                placeholder="Leave blank for an open room"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
             <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={!parsed} onClick={handleHostStart}>
               Create swarm room
             </button>
@@ -86,7 +98,17 @@ export default function Swarm() {
                 style={{ fontFamily: 'var(--font-mono)' }}
               />
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={!joinCode.trim()} onClick={() => joinRoom(joinCode.trim())}>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Passcode (if required)</label>
+              <input
+                type="text"
+                value={joinPass}
+                onChange={e => setJoinPass(e.target.value)}
+                placeholder="Leave blank for an open room"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </div>
+            <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={!joinCode.trim()} onClick={() => joinRoom(joinCode.trim(), joinPass.trim())}>
               Join as a node
             </button>
           </div>
@@ -103,6 +125,9 @@ export default function Swarm() {
                 <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(joinUrl)}>Copy link</button>
               </div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>📱 Scan the QR to join from a phone or another device</div>
+              {hostPass.trim() && (
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>🔒 Passcode required — share it separately (it isn’t in the link or QR)</div>
+              )}
             </div>
             <QrCode value={joinUrl} />
           </div>

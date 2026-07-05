@@ -28,9 +28,9 @@ interface SwarmState {
   totalMs: number
   progressPct: number
 
-  startHost: (cfg: TestConfig, pattern: PatternType) => void
+  startHost: (cfg: TestConfig, pattern: PatternType, passcode: string) => void
   startTestOnHost: () => void
-  joinRoom: (roomId: string) => void
+  joinRoom: (roomId: string, passcode: string) => void
   leave: () => void
   exportReport: () => void
   kickNode: (nodeId: string) => void
@@ -47,6 +47,7 @@ let lastTputSec = -1
 let tputAccum = 0
 let hostShareRef: ShareRef | null = null
 let nodeShareRef: ShareRef | null = null
+let hostPasscode = ''
 
 /** Recomputes each node's fair share from the current connected-node count and broadcasts it, so a node joining or leaving mid-run redistributes load instead of leaving stale shares. */
 function rebalanceHost(get: () => SwarmState): number {
@@ -81,10 +82,11 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
   totalMs: 0,
   progressPct: 0,
 
-  startHost(cfg, pattern) {
+  startHost(cfg, pattern, passcode) {
     const roomId = randomRoomId()
     hostCfg = cfg
     hostPattern = pattern
+    hostPasscode = passcode
     set({
       role: 'host', roomId, status: 'waiting', errorMsg: '',
       nodes: {}, agg: emptyAgg(), tputPts: [], progressPct: 0,
@@ -92,18 +94,12 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
 
     hostHandle = hostSwarm(
       roomId,
+      // a connection opening isn't admission — the node is added only after it
+      // passes the passcode challenge (handled in handleIncoming on 'auth')
+      () => {},
       nodeId => {
-        set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0, lat: [] } } }))
-        // a node that joins mid-run has missed the original 'start' broadcast — catch it up directly
-        if (get().status === 'running' && hostCfg && hostPattern) {
-          const share = rebalanceHost(get)
-          const conn = hostHandle?.connections.get(nodeId)
-          if (conn?.open) conn.send({ kind: 'start', cfg: hostCfg, pattern: hostPattern, shareFraction: share })
-        }
-      },
-      nodeId => {
-        // guard: if this node was already removed (e.g. kicked), don't re-create a
-        // junk entry with no nodeId when its connection later closes
+        // guard: if this node was never admitted (failed passcode) or was already
+        // removed (kicked), don't re-create a junk entry when its connection closes
         set(s => (s.nodes[nodeId] ? { nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } } : {}))
         if (get().status === 'running') rebalanceHost(get)
       },
@@ -139,12 +135,18 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     }, 250)
   },
 
-  joinRoom(roomId) {
+  joinRoom(roomId, passcode) {
     set({ role: 'node', roomId, status: 'waiting', errorMsg: '', agg: emptyAgg(), tputPts: [] })
     nodeHandle = joinSwarm(
       roomId,
-      () => {},
+      // prove we know the passcode as soon as the channel opens; the host
+      // admits us (or drops the connection) based on this
+      () => nodeHandle?.send({ kind: 'auth', passcode }),
       msg => {
+        if (msg.kind === 'authresult') {
+          if (!msg.ok) { set({ status: 'error', errorMsg: 'Incorrect passcode' }); nodeHandle?.close() }
+          return
+        }
         if (msg.kind === 'start') {
           set({ status: 'running', startedAt: Date.now(), totalMs: getDurationMs(msg.pattern, msg.cfg), progressPct: 0 })
           nodeShareRef = { value: msg.shareFraction }
@@ -167,7 +169,8 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
           nodeHandle?.close()
         }
       },
-      // don't clobber a more specific error (e.g. kicked) that already triggered this close
+      // don't clobber a more specific error (e.g. wrong passcode, or kicked) that
+      // already triggered this close
       () => set(s => (s.status === 'error' ? {} : { status: 'error', errorMsg: 'Host disconnected' })),
       err => set({ status: 'error', errorMsg: err.message || 'Peer connection error' }),
     )
@@ -180,7 +183,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     hostHandle?.close()
     nodeHandle?.close()
     hostHandle = null; nodeHandle = null; hostCfg = null; hostPattern = null
-    hostShareRef = null; nodeShareRef = null
+    hostShareRef = null; nodeShareRef = null; hostPasscode = ''
     lastTputSec = -1; tputAccum = 0
     set({
       role: 'idle', roomId: '', status: 'idle', errorMsg: '',
@@ -216,6 +219,23 @@ function handleIncoming(
   set: (partial: Partial<SwarmState> | ((s: SwarmState) => Partial<SwarmState>)) => void,
   get: () => SwarmState,
 ) {
+  if (msg.kind === 'auth') {
+    const ok = msg.passcode === hostPasscode
+    const conn = hostHandle?.connections.get(nodeId)
+    conn?.send({ kind: 'authresult', ok })
+    if (ok) {
+      set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0, lat: [] } } }))
+      // a node admitted mid-run missed the original 'start' broadcast — catch it up
+      if (get().status === 'running' && hostCfg && hostPattern) {
+        const share = rebalanceHost(get)
+        if (conn?.open) conn.send({ kind: 'start', cfg: hostCfg, pattern: hostPattern, shareFraction: share })
+      }
+    } else {
+      // let the authresult flush over the data channel before dropping the peer
+      setTimeout(() => hostHandle?.connections.get(nodeId)?.close(), 300)
+    }
+    return
+  }
   if (msg.kind !== 'sample') return
 
   set(s => {

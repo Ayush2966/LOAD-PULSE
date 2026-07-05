@@ -26,6 +26,10 @@ export interface SwarmAuthResultMsg {
   ok: boolean
 }
 
+export interface SwarmKickMsg {
+  kind: 'kick'
+}
+
 export interface SwarmSampleMsg {
   kind: 'sample'
   nodeId: string
@@ -38,7 +42,7 @@ export interface SwarmSampleMsg {
   windowEndMs: number
 }
 
-export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmSampleMsg | SwarmAuthMsg | SwarmAuthResultMsg
+export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmKickMsg | SwarmSampleMsg | SwarmAuthMsg | SwarmAuthResultMsg
 
 export interface SwarmNodeState {
   nodeId: string
@@ -46,4 +50,5 @@ export interface SwarmNodeState {
   sent: number
   ok: number
   fail: number
+  lat: number[]
 }

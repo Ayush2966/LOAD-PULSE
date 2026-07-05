@@ -7,6 +7,7 @@ import ProgressBar from '../components/ProgressBar'
 import ThroughputChart from '../components/ThroughputChart'
 import StatusDist from '../components/StatusDist'
 import QrCode from '../components/QrCode'
+import NodeLatencyBars from '../components/NodeLatencyBars'
 
 const DEFAULT_FORM = {
   constRate: 10, constRateUnit: 's' as const, constDur: 30, constDurUnit: 's' as const,
@@ -23,7 +24,7 @@ const DEFAULT_FORM = {
 }
 
 export default function Swarm() {
-  const { role, roomId, status, errorMsg, nodes, agg, tputPts, progressPct, startHost, startTestOnHost, joinRoom, leave, exportReport } = useSwarmStore()
+  const { role, roomId, status, errorMsg, nodes, agg, tputPts, progressPct, startHost, startTestOnHost, joinRoom, leave, exportReport, kickNode } = useSwarmStore()
   const [parsed, setParsed] = useState<ParsedCurl | null>(null)
   const [pattern, setPattern] = useState<PatternType>('constant')
   const [joinCode, setJoinCode] = useState('')
@@ -133,6 +134,17 @@ export default function Swarm() {
           <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>
             {nodeCount - 1} node(s) joined (plus you, the host). Start whenever ready — each joined device gets an equal share of the configured rate.
           </p>
+          {remoteNodes.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {remoteNodes.map(n => (
+                <div key={n.nodeId} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>{n.nodeId.slice(0, 10)}</span>
+                  <span style={{ color: n.connected ? '#2ea043' : '#f85149' }}>{n.connected ? '🟢' : '🔴'}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => kickNode(n.nodeId)} title="Remove this node from the swarm">Kick</button>
+                </div>
+              ))}
+            </div>
+          )}
           <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={startTestOnHost}>▶ Start swarm test</button>
           <button className="btn btn-ghost" style={{ marginLeft: 8 }} onClick={leave}>Cancel</button>
         </div>
@@ -194,16 +206,22 @@ export default function Swarm() {
               </div>
 
               <div className="card">
+                <div className="card-title">Per-node latency</div>
+                <NodeLatencyBars nodes={Object.values(nodes)} />
+              </div>
+
+              <div className="card">
                 <div className="card-title">Nodes</div>
                 <table className="hist-table">
-                  <thead><tr><th>Node</th><th>Status</th><th>Sent</th><th>OK</th><th>Fail</th></tr></thead>
+                  <thead><tr><th>Node</th><th>Status</th><th>Sent</th><th>OK</th><th>Fail</th><th></th></tr></thead>
                   <tbody>
-                    <tr><td>host (you)</td><td>connected</td><td colSpan={3}>included in aggregate above</td></tr>
+                    <tr><td>host (you)</td><td>connected</td><td colSpan={4}>included in aggregate above</td></tr>
                     {remoteNodes.map(n => (
                       <tr key={n.nodeId}>
                         <td>{n.nodeId.slice(0, 10)}</td>
                         <td>{n.connected ? '🟢 connected' : '🔴 left'}</td>
                         <td>{n.sent}</td><td>{n.ok}</td><td>{n.fail}</td>
+                        <td>{n.connected && <button className="btn btn-ghost btn-sm" onClick={() => kickNode(n.nodeId)} title="Remove this node from the swarm">Kick</button>}</td>
                       </tr>
                     ))}
                   </tbody>

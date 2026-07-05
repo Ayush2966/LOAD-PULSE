@@ -33,6 +33,7 @@ interface SwarmState {
   joinRoom: (roomId: string, passcode: string) => void
   leave: () => void
   exportReport: () => void
+  kickNode: (nodeId: string) => void
 }
 
 let hostHandle: HostHandle | null = null
@@ -97,8 +98,8 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
       // passes the passcode challenge (handled in handleIncoming on 'auth')
       () => {},
       nodeId => {
-        // guard: only touch state if this peer was actually admitted, so a
-        // rejected (unauthenticated) peer closing doesn't create a junk entry
+        // guard: if this node was never admitted (failed passcode) or was already
+        // removed (kicked), don't re-create a junk entry when its connection closes
         set(s => (s.nodes[nodeId] ? { nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } } : {}))
         if (get().status === 'running') rebalanceHost(get)
       },
@@ -154,17 +155,22 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
             nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies })
             set(s => ({ agg: mergeWindow(s.agg, w) }))
           }, nodeAbort.signal).then(() => {
-            set({ status: 'done', progressPct: 100 })
+            // if we were kicked (status already 'error'), don't flip back to 'done'
+            set(s => (s.status === 'error' ? {} : { status: 'done', progressPct: 100 }))
             nodeShareRef = null
           })
         } else if (msg.kind === 'rebalance') {
           if (nodeShareRef) nodeShareRef.value = msg.shareFraction
         } else if (msg.kind === 'stop') {
           nodeAbort?.abort()
+        } else if (msg.kind === 'kick') {
+          nodeAbort?.abort()
+          set({ status: 'error', errorMsg: 'Removed by host' })
+          nodeHandle?.close()
         }
       },
-      // don't clobber a more specific error (e.g. wrong passcode) that already
-      // triggered this close
+      // don't clobber a more specific error (e.g. wrong passcode, or kicked) that
+      // already triggered this close
       () => set(s => (s.status === 'error' ? {} : { status: 'error', errorMsg: 'Host disconnected' })),
       err => set({ status: 'error', errorMsg: err.message || 'Peer connection error' }),
     )
@@ -190,6 +196,21 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     if (!report) return
     downloadSwarmReport(report)
   },
+
+  kickNode(nodeId) {
+    if (get().role !== 'host' || nodeId === 'host-self') return
+    const conn = hostHandle?.connections.get(nodeId)
+    conn?.send({ kind: 'kick' })
+    // let the kick notice flush, then drop the connection
+    setTimeout(() => hostHandle?.connections.get(nodeId)?.close(), 300)
+    // remove immediately so the host UI reflects it without waiting for the close event
+    set(s => {
+      const nodes = { ...s.nodes }
+      delete nodes[nodeId]
+      return { nodes }
+    })
+    if (get().status === 'running') rebalanceHost(get)
+  },
 }))
 
 function handleIncoming(
@@ -203,7 +224,7 @@ function handleIncoming(
     const conn = hostHandle?.connections.get(nodeId)
     conn?.send({ kind: 'authresult', ok })
     if (ok) {
-      set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0 } } }))
+      set(s => ({ nodes: { ...s.nodes, [nodeId]: { nodeId, connected: true, sent: 0, ok: 0, fail: 0, lat: [] } } }))
       // a node admitted mid-run missed the original 'start' broadcast — catch it up
       if (get().status === 'running' && hostCfg && hostPattern) {
         const share = rebalanceHost(get)
@@ -221,9 +242,14 @@ function handleIncoming(
     const agg = mergeWindow(s.agg, msg)
     const nodes = { ...s.nodes }
     if (nodes[nodeId]) {
-      nodes[nodeId] = { ...nodes[nodeId], sent: nodes[nodeId].sent + msg.sent, ok: nodes[nodeId].ok + msg.ok, fail: nodes[nodeId].fail + msg.fail }
+      const prev = nodes[nodeId]
+      nodes[nodeId] = {
+        ...prev,
+        sent: prev.sent + msg.sent, ok: prev.ok + msg.ok, fail: prev.fail + msg.fail,
+        lat: [...prev.lat, ...msg.latencies].slice(-2000),
+      }
     } else if (nodeId === 'host-self') {
-      nodes[nodeId] = { nodeId, connected: true, sent: msg.sent, ok: msg.ok, fail: msg.fail }
+      nodes[nodeId] = { nodeId, connected: true, sent: msg.sent, ok: msg.ok, fail: msg.fail, lat: msg.latencies.slice(-2000) }
     }
 
     const startedAt = s.startedAt

@@ -16,6 +16,10 @@ export interface SwarmRebalanceMsg {
   shareFraction: number
 }
 
+export interface SwarmKickMsg {
+  kind: 'kick'
+}
+
 export interface SwarmSampleMsg {
   kind: 'sample'
   nodeId: string
@@ -28,7 +32,7 @@ export interface SwarmSampleMsg {
   windowEndMs: number
 }
 
-export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmSampleMsg
+export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmKickMsg | SwarmSampleMsg
 
 export interface SwarmNodeState {
   nodeId: string

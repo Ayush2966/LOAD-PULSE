@@ -5,6 +5,8 @@ export interface SwarmStartMsg {
   cfg: TestConfig
   pattern: PatternType
   shareFraction: number
+  /** Host-assigned disjoint {{seq}} block base for this node (host itself uses 0), so unique variables never collide across the swarm. */
+  seqBase: number
 }
 
 export interface SwarmStopMsg {

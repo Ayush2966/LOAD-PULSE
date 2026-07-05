@@ -1,6 +1,15 @@
 import type { TestConfig, PatternType } from '../types'
 import { getRps, getDurationMs, getConcur, getTimeout } from '../loadPatterns'
 import { fireRequest, makeSemaphore } from '../fetcher'
+import { createVarSpace } from '../variableInjector'
+
+/**
+ * Width of each node's {{seq}}/{{phone}} block. The host hands every swarm
+ * participant a distinct multiple of this (host itself = 0), so blocks are
+ * truly disjoint — no birthday collisions, unlike random self-seeding. 10M
+ * per node keeps {{phone}} at 10 digits for up to 99 nodes × 10M requests.
+ */
+export const SEQ_BLOCK_WIDTH = 10_000_000
 
 export interface SwarmSampleWindow {
   sent: number
@@ -34,8 +43,13 @@ export function runSwarmSlice(
   shareRef: ShareRef,
   onSample: (w: SwarmSampleWindow) => void,
   signal: AbortSignal,
+  seqBase = 0,
 ): Promise<void> {
   return new Promise(resolve => {
+    // isolated space (not the module default): a solo test running in this same
+    // tab keeps its own counters, and the host-assigned seqBase block keeps this
+    // node's {{seq}}/{{phone}} values disjoint from every other node's
+    const varSpace = createVarSpace(seqBase)
     const totalMs = getDurationMs(pattern, cfg)
     const timeout = getTimeout(pattern, cfg)
     // full concurrency ceiling per node — the tick-rate loop below is what actually
@@ -66,7 +80,7 @@ export function runSwarmSlice(
         cfg.scMin, cfg.scMax,
         cfg.latThreshOn, cfg.latThresh,
         cfg.bodyCheckOn, cfg.bodyCheck,
-        false, signal,
+        false, signal, varSpace,
       )
       sem.release()
       if (stopped) return

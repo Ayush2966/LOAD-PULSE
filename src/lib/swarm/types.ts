@@ -16,6 +16,16 @@ export interface SwarmRebalanceMsg {
   shareFraction: number
 }
 
+export interface SwarmAuthMsg {
+  kind: 'auth'
+  passcode: string
+}
+
+export interface SwarmAuthResultMsg {
+  kind: 'authresult'
+  ok: boolean
+}
+
 export interface SwarmSampleMsg {
   kind: 'sample'
   nodeId: string
@@ -28,7 +38,7 @@ export interface SwarmSampleMsg {
   windowEndMs: number
 }
 
-export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmSampleMsg
+export type SwarmMessage = SwarmStartMsg | SwarmStopMsg | SwarmRebalanceMsg | SwarmSampleMsg | SwarmAuthMsg | SwarmAuthResultMsg
 
 export interface SwarmNodeState {
   nodeId: string

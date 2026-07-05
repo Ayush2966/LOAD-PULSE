@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { TestConfig, PatternType, TputPoint } from '../lib/types'
 import { hostSwarm, joinSwarm, randomRoomId, type HostHandle, type NodeHandle } from '../lib/swarm/swarmNetwork'
-import { runSwarmSlice, type SwarmSampleWindow, type ShareRef } from '../lib/swarm/swarmEngine'
+import { runSwarmSlice, SEQ_BLOCK_WIDTH, type SwarmSampleWindow, type ShareRef } from '../lib/swarm/swarmEngine'
 import { getDurationMs } from '../lib/loadPatterns'
 import { percentile } from '../lib/percentile'
 import type { SwarmMessage, SwarmNodeState } from '../lib/swarm/types'
@@ -48,6 +48,14 @@ let tputAccum = 0
 let hostShareRef: ShareRef | null = null
 let nodeShareRef: ShareRef | null = null
 let hostPasscode = ''
+// next disjoint {{seq}} block to hand out — host itself always runs block 0,
+// every node (including late joiners) gets a fresh block so unique variables
+// never collide across the swarm
+let nextSeqBlock = 1
+
+function claimSeqBase(): number {
+  return (nextSeqBlock++) * SEQ_BLOCK_WIDTH
+}
 
 /** Recomputes each node's fair share from the current connected-node count and broadcasts it, so a node joining or leaving mid-run redistributes load instead of leaving stale shares. */
 function rebalanceHost(get: () => SwarmState): number {
@@ -118,13 +126,18 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     const startedAt = Date.now()
 
     set({ status: 'running', startedAt, totalMs, progressPct: 0, agg: emptyAgg(), tputPts: [] })
-    hostHandle.broadcast({ kind: 'start', cfg, pattern, shareFraction: share })
+    // per-connection sends (not broadcast): each node gets its own disjoint
+    // seqBase block so {{seq}}/{{phone}}/{{email}} never collide across nodes
+    nextSeqBlock = 1
+    for (const conn of hostHandle.connections.values()) {
+      if (conn.open) conn.send({ kind: 'start', cfg, pattern, shareFraction: share, seqBase: claimSeqBase() })
+    }
 
     hostShareRef = { value: share }
     hostAbort = new AbortController()
     void runSwarmSlice(cfg, pattern, hostShareRef, w => {
       handleIncoming('host-self', { kind: 'sample', nodeId: 'host-self', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies }, set, get)
-    }, hostAbort.signal).then(() => {
+    }, hostAbort.signal, 0).then(() => {
       set({ status: 'done', progressPct: 100 })
       hostShareRef = null
     })
@@ -154,7 +167,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
           void runSwarmSlice(msg.cfg, msg.pattern, nodeShareRef, w => {
             nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies })
             set(s => ({ agg: mergeWindow(s.agg, w) }))
-          }, nodeAbort.signal).then(() => {
+          }, nodeAbort.signal, msg.seqBase).then(() => {
             // if we were kicked (status already 'error'), don't flip back to 'done'
             set(s => (s.status === 'error' ? {} : { status: 'done', progressPct: 100 }))
             nodeShareRef = null
@@ -184,6 +197,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     nodeHandle?.close()
     hostHandle = null; nodeHandle = null; hostCfg = null; hostPattern = null
     hostShareRef = null; nodeShareRef = null; hostPasscode = ''
+    nextSeqBlock = 1
     lastTputSec = -1; tputAccum = 0
     set({
       role: 'idle', roomId: '', status: 'idle', errorMsg: '',
@@ -228,7 +242,7 @@ function handleIncoming(
       // a node admitted mid-run missed the original 'start' broadcast — catch it up
       if (get().status === 'running' && hostCfg && hostPattern) {
         const share = rebalanceHost(get)
-        if (conn?.open) conn.send({ kind: 'start', cfg: hostCfg, pattern: hostPattern, shareFraction: share })
+        if (conn?.open) conn.send({ kind: 'start', cfg: hostCfg, pattern: hostPattern, shareFraction: share, seqBase: claimSeqBase() })
       }
     } else {
       // let the authresult flush over the data channel before dropping the peer

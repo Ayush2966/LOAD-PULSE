@@ -65,7 +65,7 @@ export default function CurlInput({ onParsed }: Props) {
             {headerCount > 0 && <span className="pill">{headerCount} header{headerCount > 1 ? 's' : ''}</span>}
             {parsed.body && <span className="pill">body</span>}
           </div>
-          <div className="curl-ok mt-8">✓ Valid cURL — variables like {'{{uuid}}'}, {'{{timestamp}}'} auto-injected</div>
+          <div className="curl-ok mt-8">✓ Valid cURL — variables like {'{{uuid}}'}, {'{{seq}}'}, {'{{phone}}'}, {'{{email}}'} auto-injected (see Docs §3)</div>
         </div>
       )}
     </div>

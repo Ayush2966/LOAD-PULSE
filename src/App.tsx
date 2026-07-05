@@ -5,6 +5,7 @@ import History from './pages/History'
 import Compare from './pages/Compare'
 import Docs from './pages/Docs'
 import SharedReport from './pages/SharedReport'
+import Swarm from './pages/Swarm'
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -42,10 +43,19 @@ function InstallBanner() {
   )
 }
 
+const NAV_LINKS = [
+  { to: '/', label: 'Run', end: true },
+  { to: '/history', label: 'History' },
+  { to: '/compare', label: 'Compare' },
+  { to: '/swarm', label: '🐝 Swarm' },
+  { to: '/docs', label: 'Docs' },
+]
+
 function Layout({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('_lp_theme') as 'dark' | 'light') || 'dark'
   })
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -58,13 +68,20 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="nav-brand">
           ⚡ <span>LoadPulse</span>
         </div>
-        <div className="nav-links">
-          <NavLink to="/" end className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Run</NavLink>
-          <NavLink to="/history" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>History</NavLink>
-          <NavLink to="/compare" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Compare</NavLink>
-          <NavLink to="/docs" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>Docs</NavLink>
+        <div className={'nav-links' + (menuOpen ? ' open' : '')}>
+          {NAV_LINKS.map(l => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.end}
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+              onClick={() => setMenuOpen(false)}
+            >
+              {l.label}
+            </NavLink>
+          ))}
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        <div className="nav-actions">
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
@@ -72,9 +89,17 @@ function Layout({ children }: { children: React.ReactNode }) {
           >
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
+          <button
+            className="btn btn-ghost btn-sm nav-toggle"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
         </div>
       </nav>
-      <main className="page-content">{children}</main>
+      <main className="page-content" onClick={() => menuOpen && setMenuOpen(false)}>{children}</main>
     </div>
   )
 }
@@ -86,6 +111,7 @@ export default function App() {
         <Route path="/" element={<Layout><Run /></Layout>} />
         <Route path="/history" element={<Layout><History /></Layout>} />
         <Route path="/compare" element={<Layout><Compare /></Layout>} />
+        <Route path="/swarm" element={<Layout><Swarm /></Layout>} />
         <Route path="/docs" element={<Layout><Docs /></Layout>} />
         <Route path="/report" element={<SharedReport />} />
       </Routes>

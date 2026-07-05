@@ -33,6 +33,7 @@ interface SwarmState {
   joinRoom: (roomId: string) => void
   leave: () => void
   exportReport: () => void
+  kickNode: (nodeId: string) => void
 }
 
 let hostHandle: HostHandle | null = null
@@ -101,7 +102,9 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
         }
       },
       nodeId => {
-        set(s => ({ nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } }))
+        // guard: if this node was already removed (e.g. kicked), don't re-create a
+        // junk entry with no nodeId when its connection later closes
+        set(s => (s.nodes[nodeId] ? { nodes: { ...s.nodes, [nodeId]: { ...s.nodes[nodeId], connected: false } } } : {}))
         if (get().status === 'running') rebalanceHost(get)
       },
       (nodeId, msg) => handleIncoming(nodeId, msg, set, get),
@@ -150,16 +153,22 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
             nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies })
             set(s => ({ agg: mergeWindow(s.agg, w) }))
           }, nodeAbort.signal).then(() => {
-            set({ status: 'done', progressPct: 100 })
+            // if we were kicked (status already 'error'), don't flip back to 'done'
+            set(s => (s.status === 'error' ? {} : { status: 'done', progressPct: 100 }))
             nodeShareRef = null
           })
         } else if (msg.kind === 'rebalance') {
           if (nodeShareRef) nodeShareRef.value = msg.shareFraction
         } else if (msg.kind === 'stop') {
           nodeAbort?.abort()
+        } else if (msg.kind === 'kick') {
+          nodeAbort?.abort()
+          set({ status: 'error', errorMsg: 'Removed by host' })
+          nodeHandle?.close()
         }
       },
-      () => set({ status: 'error', errorMsg: 'Host disconnected' }),
+      // don't clobber a more specific error (e.g. kicked) that already triggered this close
+      () => set(s => (s.status === 'error' ? {} : { status: 'error', errorMsg: 'Host disconnected' })),
       err => set({ status: 'error', errorMsg: err.message || 'Peer connection error' }),
     )
   },
@@ -183,6 +192,21 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     const report = buildSwarmReport(get(), hostCfg, hostPattern)
     if (!report) return
     downloadSwarmReport(report)
+  },
+
+  kickNode(nodeId) {
+    if (get().role !== 'host' || nodeId === 'host-self') return
+    const conn = hostHandle?.connections.get(nodeId)
+    conn?.send({ kind: 'kick' })
+    // let the kick notice flush, then drop the connection
+    setTimeout(() => hostHandle?.connections.get(nodeId)?.close(), 300)
+    // remove immediately so the host UI reflects it without waiting for the close event
+    set(s => {
+      const nodes = { ...s.nodes }
+      delete nodes[nodeId]
+      return { nodes }
+    })
+    if (get().status === 'running') rebalanceHost(get)
   },
 }))
 

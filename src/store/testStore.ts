@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { ParsedCurl, ChartPoint, TputPoint, LogEntry, FailureGroup, TestConfig, PatternType, ReportData } from '../lib/types'
 import { getRps, getDurationMs, getConcur, getTimeout } from '../lib/loadPatterns'
 import { fireRequest, makeSemaphore } from '../lib/fetcher'
+import { resetUniqueVars } from '../lib/variableInjector'
 import { percentile } from '../lib/percentile'
 
 interface TestStats {
@@ -100,6 +101,7 @@ export const useTestStore = create<TestState>((set, get) => {
       stopController?.abort()
       stopController = new AbortController()
       accum = 0; lastTputSec = -1; tputSecCount = 0
+      resetUniqueVars()
 
       const totalMs = getDurationMs(pattern, cfg)
       const concur = getConcur(pattern, cfg)

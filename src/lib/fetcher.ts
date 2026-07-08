@@ -1,5 +1,5 @@
 import type { ParsedCurl } from './types'
-import { applyVars } from './variableInjector'
+import { applyVars, type VarSpace } from './variableInjector'
 
 export interface FetchResult {
   ok: boolean
@@ -28,8 +28,9 @@ export async function fireRequest(
   bodyCheck: string,
   captureBody: boolean,
   signal: AbortSignal,
+  varSpace?: VarSpace,
 ): Promise<FetchResult> {
-  const o = applyVars(opts)
+  const o = applyVars(opts, varSpace)
   const t0 = Date.now()
   const ctrl = new AbortController()
   const combined = AbortSignal.any ? AbortSignal.any([ctrl.signal, signal]) : ctrl.signal

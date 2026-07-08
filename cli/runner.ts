@@ -1,5 +1,6 @@
 import { getRps, getDurationMs, getConcur, getTimeout } from '../src/lib/loadPatterns.ts'
 import { fireRequest, makeSemaphore } from '../src/lib/fetcher.ts'
+import { resetUniqueVars } from '../src/lib/variableInjector.ts'
 import { percentile } from '../src/lib/percentile.ts'
 import type { TestConfig, PatternType, ReportData, FailureGroup, ChartPoint } from '../src/lib/types.ts'
 
@@ -17,6 +18,7 @@ export async function runTest(
   onTick: (snap: RunSnapshot) => void,
   abortSignal?: AbortSignal,
 ): Promise<ReportData> {
+  resetUniqueVars()
   const totalMs = getDurationMs(pattern, cfg)
   const concur = getConcur(pattern, cfg)
   const timeout = getTimeout(pattern, cfg)

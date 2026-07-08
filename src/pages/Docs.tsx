@@ -93,16 +93,35 @@ export default function Docs() {
               <tr><td><code>{'{{timestamp}}'}</code></td><td>1719825600000</td><td>Unix ms timestamps, cache-busting</td></tr>
               <tr><td><code>{'{{random_int}}'}</code></td><td>47382</td><td>Random numbers 0–99999</td></tr>
               <tr><td><code>{'{{random_int:1:100}}'}</code></td><td>42</td><td>Random int in a custom range (min:max)</td></tr>
+              <tr><td><code>{'{{random_str:8}}'}</code></td><td>kX3n9qAz</td><td>Random alphanumeric string of given length</td></tr>
+              <tr><td><code>{'{{seq}}'}</code></td><td>1, 2, 3…</td><td>Guaranteed-unique counter — never repeats within a run, unlike random values</td></tr>
+              <tr><td><code>{'{{phone}}'}</code></td><td>9000000001</td><td>Unique, valid-format 10-digit phone number per request</td></tr>
+              <tr><td><code>{'{{email}}'}</code></td><td>user1@loadtest.dev</td><td>Unique, valid-format email per request</td></tr>
+              <tr><td><code>{'{{repeat_uuid:10}}'}</code></td><td>same uuid × 10 requests</td><td>Deliberate duplicates — assert your idempotency logic actually dedupes</td></tr>
               <tr><td><code>{'{{chain.token}}'}</code></td><td>eyJhbGci...</td><td>Value extracted from a chain step (see §6)</td></tr>
             </tbody>
           </table>
         </div>
+        <p className="docs-p" style={{ marginTop: 8 }}>
+          <strong>Within one request, <code>{'{{seq}}'}</code>, <code>{'{{phone}}'}</code> and <code>{'{{email}}'}</code> share the same sequence number</strong> — so an ID in the URL, an idempotency key header, and a body field all agree. The next request gets the next number.
+        </p>
         <div className="docs-code-block">
           <div className="docs-code-label">Example — unique body per request</div>
           <pre>{`curl -X POST https://api.example.com/orders \\
   -H "Idempotency-Key: {{uuid}}" \\
   -H "Content-Type: application/json" \\
   -d '{"orderId":"{{uuid}}","qty":{{random_int:1:10}}}'`}</pre>
+        </div>
+        <div className="docs-code-block">
+          <div className="docs-code-label">Example — idempotency testing, both directions</div>
+          <pre>{`# Unique mode: every request is a distinct user — server must process all of them
+curl -X POST https://api.example.com/signup \\
+  -d '{"phone":"{{phone}}","email":"{{email}}","ref":"{{seq}}"}'
+
+# Repeat mode: every 10 requests share one key — server must dedupe to 1 operation
+curl -X POST https://api.example.com/payments \\
+  -H "Idempotency-Key: {{repeat_uuid:10}}" \\
+  -d '{"amount":100}'`}</pre>
         </div>
       </section>
 

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import Run from './pages/Run'
-import History from './pages/History'
-import Compare from './pages/Compare'
-import Docs from './pages/Docs'
-import SharedReport from './pages/SharedReport'
-import Swarm from './pages/Swarm'
+
+const History = lazy(() => import('./pages/History'))
+const Compare = lazy(() => import('./pages/Compare'))
+const Docs = lazy(() => import('./pages/Docs'))
+const SharedReport = lazy(() => import('./pages/SharedReport'))
+const Swarm = lazy(() => import('./pages/Swarm'))
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -104,17 +105,23 @@ function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function PageLoader() {
+  return <div className="page-loader">Loading…</div>
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout><Run /></Layout>} />
-        <Route path="/history" element={<Layout><History /></Layout>} />
-        <Route path="/compare" element={<Layout><Compare /></Layout>} />
-        <Route path="/swarm" element={<Layout><Swarm /></Layout>} />
-        <Route path="/docs" element={<Layout><Docs /></Layout>} />
-        <Route path="/report" element={<SharedReport />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Layout><Run /></Layout>} />
+          <Route path="/history" element={<Layout><History /></Layout>} />
+          <Route path="/compare" element={<Layout><Compare /></Layout>} />
+          <Route path="/swarm" element={<Layout><Swarm /></Layout>} />
+          <Route path="/docs" element={<Layout><Docs /></Layout>} />
+          <Route path="/report" element={<SharedReport />} />
+        </Routes>
+      </Suspense>
       <InstallBanner />
     </BrowserRouter>
   )

@@ -33,11 +33,23 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // xlsx (Excel export) and Swarm (peerjs) are route/action-level lazy
+        // chunks — skip them at install time so the SW precache stays small,
+        // and instead cache them on first actual use below.
+        globIgnores: ['**/xlsx-*.js', '**/Swarm-*.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts-cache' }
+          },
+          {
+            urlPattern: /\/assets\/(xlsx|Swarm)-.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'lazy-chunks-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 30 }
+            }
           }
         ]
       }

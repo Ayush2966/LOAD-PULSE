@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import type { LogEntry, ReportData } from './types'
 
 export function exportCSV(rows: object[], filename: string) {
@@ -20,7 +19,8 @@ export function exportCSV(rows: object[], filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function exportExcel(log: LogEntry[], report: ReportData, filename: string) {
+export async function exportExcel(log: LogEntry[], report: ReportData, filename: string) {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
 
   const logRows = log.map(e => ({

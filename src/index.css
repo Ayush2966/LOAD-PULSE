@@ -139,6 +139,15 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   padding: 24px 20px;
 }
 
+.page-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-dim, #8b949e);
+  font-size: 14px;
+}
+
 .card {
   background: var(--bg1);
   border: 1px solid var(--border);

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ReportData, LogEntry } from '../lib/types'
 import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
@@ -12,11 +13,21 @@ interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[] }
 
 export default function ReportView({ report, log = [], latencies }: Props) {
   const { chartPts, tputPts } = useTestStore()
+  const [exportingExcel, setExportingExcel] = useState(false)
   const m = report.meta
   const sr = parseFloat(m.successRate)
   const srClass = sr >= 99 ? 'text-green' : sr >= 90 ? '' : 'text-red'
 
   const failEntries = Object.entries(report.failures)
+
+  async function handleExcel() {
+    setExportingExcel(true)
+    try {
+      await exportExcel(log, report, 'loadpulse-report.xlsx')
+    } finally {
+      setExportingExcel(false)
+    }
+  }
 
   function exportJson() {
     const b = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
@@ -160,7 +171,9 @@ export default function ReportView({ report, log = [], latencies }: Props) {
         <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
         <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>
         <button className="btn btn-ghost" onClick={handleCSV}>↓ CSV</button>
-        <button className="btn btn-ghost" onClick={() => exportExcel(log, report, 'loadpulse-report.xlsx')}>↓ Excel (.xlsx)</button>
+        <button className="btn btn-ghost" onClick={handleExcel} disabled={exportingExcel}>
+          {exportingExcel ? 'Preparing…' : '↓ Excel (.xlsx)'}
+        </button>
       </div>
     </div>
   )

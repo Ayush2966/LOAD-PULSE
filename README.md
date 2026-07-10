@@ -4,6 +4,7 @@
 
 LoadPulse is a browser-based load testing tool with a companion CLI. Paste any cURL command, pick a load pattern, and get live latency charts, percentile breakdowns, Apdex scores, and shareable reports — no account, no server, no setup.
 
+[![CI](https://github.com/Ayush2966/LOAD-PULSE/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush2966/LOAD-PULSE/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/loadpulse)](https://www.npmjs.com/package/loadpulse)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -78,6 +79,9 @@ npm run build:cli
 
 # Lint
 npm run lint
+
+# Test
+npm run test
 ```
 
 ---

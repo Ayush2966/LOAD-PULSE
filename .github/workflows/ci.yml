@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Lint, typecheck/build, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck & build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+  dogfood-cli:
+    name: Dogfood CLI (SLA gate demo)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build CLI bundle
+        run: npm run build:cli
+
+      # Runs the CLI we just built against a public demo endpoint with real
+      # SLA gates, the same way a consumer would gate a deploy. Non-blocking
+      # (step-level continue-on-error) because it depends on a third-party
+      # endpoint's live latency/uptime, not on this repo's code quality.
+      - name: Run demo load test against public endpoint
+        id: loadtest
+        continue-on-error: true
+        run: |
+          node dist-cli/loadpulse.mjs run \
+            --curl "curl https://api.github.com/zen" \
+            --rate 5 --duration 5 --concurrency 5 \
+            --fail-under 95 --p95-under 3000 \
+            --json > demo-report.json
+          cat demo-report.json
+
+      - name: Report gate outcome
+        if: always()
+        run: |
+          if [ "${{ steps.loadtest.outcome }}" = "success" ]; then
+            echo "✅ SLA gates passed against https://api.github.com/zen"
+          else
+            echo "⚠️ SLA gates failed — see demo-report.json artifact. Not blocking CI: this hits a live third-party endpoint, not this repo's code."
+          fi
+
+      - name: Upload demo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadpulse-demo-report
+          path: demo-report.json

@@ -74,5 +74,9 @@ export default function LatencyChart({ points }: Props) {
     return () => ro.disconnect()
   }, [draw])
 
-  return <canvas ref={ref} style={{ display: 'block' }} />
+  return (
+    <div style={{ width: '100%' }}>
+      <canvas ref={ref} style={{ display: 'block' }} />
+    </div>
+  )
 }

@@ -160,11 +160,14 @@ export default function ReportView({ report, log = [], latencies }: Props) {
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
         <button className="btn btn-primary btn-sm" onClick={(e) => {
+          const btn = e.currentTarget
+          const orig = btn.textContent
           const url = buildShareUrl(report)
           navigator.clipboard.writeText(url).then(() => {
-            const btn = e.currentTarget as HTMLButtonElement
-            const orig = btn.textContent
             btn.textContent = '✓ Copied!'
+            setTimeout(() => { btn.textContent = orig }, 2000)
+          }).catch(() => {
+            btn.textContent = '✗ Copy failed'
             setTimeout(() => { btn.textContent = orig }, 2000)
           })
         }}>🔗 Share Report</button>

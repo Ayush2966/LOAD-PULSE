@@ -333,16 +333,18 @@ export default function Run() {
 
           <LiveStats />
 
-          <div className="charts-grid">
-            <div className="card">
-              <div className="card-title">Latency over time</div>
-              <LatencyChart points={chartPts} />
+          {running && (
+            <div className="charts-grid">
+              <div className="card">
+                <div className="card-title">Latency over time</div>
+                <LatencyChart points={chartPts} />
+              </div>
+              <div className="card">
+                <div className="card-title">Throughput (req/s)</div>
+                <ThroughputChart points={tputPts} />
+              </div>
             </div>
-            <div className="card">
-              <div className="card-title">Throughput (req/s)</div>
-              <ThroughputChart points={tputPts} />
-            </div>
-          </div>
+          )}
 
           <div className="card">
             <div className="card-title">Status distribution</div>

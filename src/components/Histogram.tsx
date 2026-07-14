@@ -57,7 +57,7 @@ export default function Histogram({ points }: Props) {
   }, [points])
 
   return (
-    <div className="chart-wrap" style={{ height: 100 }}>
+    <div className="chart-wrap" style={{ height: 150 }}>
       <canvas ref={ref} />
     </div>
   )

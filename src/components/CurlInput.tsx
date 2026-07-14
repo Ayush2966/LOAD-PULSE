@@ -3,7 +3,7 @@ import { parseCurl } from '../lib/curlParser'
 import type { ParsedCurl } from '../lib/types'
 
 interface Props {
-  onParsed: (p: ParsedCurl) => void
+  onParsed: (p: ParsedCurl | null) => void
 }
 
 export default function CurlInput({ onParsed }: Props) {
@@ -15,7 +15,7 @@ export default function CurlInput({ onParsed }: Props) {
     function onSetCurl(e: Event) {
       const curl = (e as CustomEvent<string>).detail
       setRaw(curl)
-      if (!curl.trim()) { setErr(''); setParsed(null); return }
+      if (!curl.trim()) { setErr(''); setParsed(null); onParsed(null); return }
       try {
         const p = parseCurl(curl)
         setErr('')
@@ -24,6 +24,7 @@ export default function CurlInput({ onParsed }: Props) {
       } catch (ex: unknown) {
         setErr((ex as Error).message || 'Parse error')
         setParsed(null)
+        onParsed(null)
       }
     }
     window.addEventListener('loadpulse:setcurl', onSetCurl)
@@ -32,7 +33,7 @@ export default function CurlInput({ onParsed }: Props) {
 
   function handleChange(val: string) {
     setRaw(val)
-    if (!val.trim()) { setErr(''); setParsed(null); return }
+    if (!val.trim()) { setErr(''); setParsed(null); onParsed(null); return }
     try {
       const p = parseCurl(val)
       setErr('')
@@ -41,6 +42,7 @@ export default function CurlInput({ onParsed }: Props) {
     } catch (e: unknown) {
       setErr((e as Error).message || 'Parse error')
       setParsed(null)
+      onParsed(null)
     }
   }
 

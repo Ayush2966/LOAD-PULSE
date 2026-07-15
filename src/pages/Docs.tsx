@@ -29,7 +29,8 @@ export default function Docs() {
             ['#postman', '13. Postman Import'],
             ['#apdex', '14. Apdex & SLA'],
             ['#sharing', '15. Sharing Reports'],
-            ['#cli', '16. CI / CLI Mode'],
+            ['#swarm', '16. Distributed Swarm'],
+            ['#cli', '17. CI / CLI Mode'],
           ].map(([href, label]) => (
             <a key={href} href={href} className="docs-toc-link">{label}</a>
           ))}
@@ -450,7 +451,7 @@ curl -X POST https://api.example.com/payments \\
 
       {/* 14. Apdex & SLA */}
       <section id="apdex" className="docs-section">
-        <h2 className="docs-h2">13. Apdex Score & SLA Checker</h2>
+        <h2 className="docs-h2">14. Apdex Score & SLA Checker</h2>
         <p className="docs-p">After a test completes, LoadPulse automatically calculates an <strong>Apdex score</strong> and runs your <strong>SLA rules</strong> against the results. Both panels appear in the Final Report section.</p>
 
         <h3 className="docs-h3">Apdex Score</h3>
@@ -511,7 +512,7 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
 
       {/* 15. Sharing Reports */}
       <section id="sharing" className="docs-section">
-        <h2 className="docs-h2">13. Sharing Reports</h2>
+        <h2 className="docs-h2">15. Sharing Reports</h2>
         <p className="docs-p">After a test completes, click <strong>🔗 Share Report</strong> in the report section. This copies a URL to your clipboard that encodes the entire report — anyone who opens the link sees the full results instantly, no account or backend needed.</p>
         <div className="docs-table-wrap">
           <table className="docs-table">
@@ -526,9 +527,53 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
         </div>
       </section>
 
-      {/* 16. CI / CLI Mode */}
+      {/* 16. Distributed Swarm */}
+      <section id="swarm" className="docs-section">
+        <h2 className="docs-h2">16. Distributed Swarm</h2>
+        <p className="docs-p">Need more load than one browser tab can push? Swarm mode runs a single load test across multiple browsers and devices at once. Every participant fires a share of the traffic at your API, and the host aggregates all the results in real time — peer-to-peer over WebRTC, with no backend or account.</p>
+
+        <h3 className="docs-h3">Hosting a swarm</h3>
+        <div className="docs-steps">
+          {[
+            ['Open the Swarm page', 'Click 🐝 Swarm in the top nav. Paste the cURL you want to test and pick a load pattern, exactly like a normal run.'],
+            ['(Optional) set a passcode', 'Add a room passcode if you want to control who can join. Nodes must send the correct passcode before they are admitted.'],
+            ['Create the room', 'Click "Create swarm room". You get a short room code, a copyable join link, and a QR code.'],
+            ['Wait for nodes to join', 'Share the code, link, or QR. As people join they appear in the waiting room — kick any node you did not expect.'],
+            ['Start the test', 'Click "Start swarm test". Every node runs its slice at once; the host shows combined stats, a throughput chart, status distribution, and per-node latency bars.'],
+            ['Export the report', 'When the run ends, click "Export Report" to download the aggregated swarm results as JSON.'],
+          ].map(([title, desc], i) => (
+            <div key={i} className="docs-step">
+              <div className="docs-step-num">{i + 1}</div>
+              <div><div className="docs-step-title">{title}</div><div className="docs-step-desc">{desc}</div></div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="docs-h3">Joining a swarm</h3>
+        <div className="docs-steps">
+          {[
+            ['Open the join link', 'Scan the host\'s QR code, open the shared link (it pre-fills the room code via ?join=CODE), or open the Swarm page and type the code.'],
+            ['Enter the passcode', 'If the host set one, enter it. You then wait in the room until the host starts the test.'],
+            ['Contribute load', 'Once started, your device fires its share of the requests and streams live samples back to the host. You see your own contribution; the host sees the combined picture.'],
+          ].map(([title, desc], i) => (
+            <div key={i} className="docs-step">
+              <div className="docs-step-num">{i + 1}</div>
+              <div><div className="docs-step-title">{title}</div><div className="docs-step-desc">{desc}</div></div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="docs-h3">How the load is split</h3>
+        <p className="docs-p">The host divides the configured aggregate rate across all connected nodes as a live <em>share fraction</em>. When a node joins, leaves, or is kicked, the host rebalances so the total keeps matching your target rate. Each node also gets its own disjoint block of sequence numbers, so unique variables like <code>{'{{seq}}'}</code>, <code>{'{{email}}'}</code>, and <code>{'{{phone}}'}</code> never collide across the swarm.</p>
+        <div className="docs-callout">
+          <span className="docs-callout-icon">⚠️</span>
+          <span>Swarm connects peers directly over WebRTC using public STUN/TURN servers. Strict corporate or mobile NATs can block the connection, and the host tab must stay open for the room to stay alive. For fully headless, reproducible load in CI, use the CLI (§17) instead.</span>
+        </div>
+      </section>
+
+      {/* 17. CI / CLI Mode */}
       <section id="cli" className="docs-section">
-        <h2 className="docs-h2">16. CI / CLI Mode</h2>
+        <h2 className="docs-h2">17. CI / CLI Mode</h2>
         <p className="docs-p">Run LoadPulse as a command-line tool to gate deploys on performance. It uses the same engine as the UI — identical load patterns, latency math, and success criteria — with a clean terminal output and a non-zero exit code when any SLA is breached.</p>
 
         <div className="docs-callout">
@@ -537,7 +582,7 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
         </div>
 
         <h3 className="docs-h3">Installation</h3>
-        <p className="docs-p">The CLI is published on npm. Install it globally once — works on any machine with Node 18+.</p>
+        <p className="docs-p">The CLI is published on npm. Install it globally once — works on any machine with Node 20+.</p>
         <div className="docs-code-block">
           <div className="docs-code-label">Install globally</div>
           <pre>{`npm install -g loadpulse`}</pre>
@@ -548,7 +593,7 @@ Example: 800 satisfied, 150 tolerating, 50 frustrated, T=500ms
         </div>
         <div className="docs-callout">
           <span className="docs-callout-icon">📦</span>
-          <span>Published at <strong>npmjs.com/package/loadpulse</strong> — no TypeScript, no build step, no repo clone needed. Just Node 18+.</span>
+          <span>Published at <strong>npmjs.com/package/loadpulse</strong> — no TypeScript, no build step, no repo clone needed. Just Node 20+.</span>
         </div>
 
         <h3 className="docs-h3">Running a test</h3>

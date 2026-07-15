@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CLI load testing tool — run from the terminal, gate deploys on SLA",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "loadpulse": "dist-cli/loadpulse.mjs"
   },

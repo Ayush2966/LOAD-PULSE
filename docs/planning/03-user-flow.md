@@ -16,8 +16,8 @@ flowchart TD
     H -- Yes --> H1[Auth request → extract token → inject into main request]
     H -- No --> I[Click Run]
     H1 --> I
-    I --> J[fetcher.ts drives requests per loadPatterns.ts schedule\n(dynamic {{vars}} injected per request)]
-    J --> K[Live charts update:\nlatency, throughput, status codes, histogram]
+    I --> J["fetcher.ts drives requests per loadPatterns.ts schedule\n(dynamic {{vars}} injected per request)"]
+    J --> K["Live charts update:\nlatency, throughput, status codes, histogram"]
     K --> L{Duration elapsed OR\nerror-rate threshold hit?}
     L -- Not yet --> J
     L -- Yes --> M[Test ends]
@@ -54,7 +54,7 @@ flowchart TD
     H2 --> H3[Nodes join: scan QR / open ?join=code / enter code]
     H3 --> H4{Passcode required?}
     H4 -- Yes --> H5[Node sends passcode → host authorises] --> H6
-    H4 -- No --> H6[Node in waiting room\n(host can kick)]
+    H4 -- No --> H6["Node in waiting room\n(host can kick)"]
     H6 --> H7[Host clicks Start swarm test]
     H7 --> H8[Each node runs its share of the rate\nover WebRTC; host rebalances as nodes join/leave]
     H8 --> H9[Nodes stream ~1s sample windows to host]

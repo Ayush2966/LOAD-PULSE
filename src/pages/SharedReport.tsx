@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
-import { decodeReport } from '../lib/shareReport'
-import type { ReportData } from '../lib/types'
+import { decodeReport, type SharePayload } from '../lib/shareReport'
 import ReportView from '../components/ReportView'
 
 export default function SharedReport() {
-  const [report, setReport] = useState<ReportData | null>(null)
+  const [payload, setPayload] = useState<SharePayload | null>(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const hash = window.location.hash
-    const match = hash.match(/data=([^&]+)/)
+    const match = window.location.hash.match(/data=([^&]+)/)
     if (!match) { setError(true); return }
-    const decoded = decodeReport(match[1])
-    if (!decoded) { setError(true); return }
-    setReport(decoded)
+    let cancelled = false
+    decodeReport(match[1]).then(decoded => {
+      if (cancelled) return
+      if (!decoded) setError(true)
+      else setPayload(decoded)
+    })
+    return () => { cancelled = true }
   }, [])
 
   if (error) return (
@@ -25,11 +27,13 @@ export default function SharedReport() {
     </div>
   )
 
-  if (!report) return (
+  if (!payload) return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text3)', fontSize: 13 }}>
       Loading report…
     </div>
   )
+
+  const { report } = payload
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -42,7 +46,7 @@ export default function SharedReport() {
           </div>
           <a href="/" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto', textDecoration: 'none' }}>Open LoadPulse →</a>
         </div>
-        <ReportView report={report} />
+        <ReportView report={report} chartPts={payload.chartPts} tputPts={payload.tputPts} />
       </div>
     </div>
   )

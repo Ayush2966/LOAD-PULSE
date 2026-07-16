@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ReportData, LogEntry } from '../lib/types'
+import type { ReportData, LogEntry, ChartPoint, TputPoint } from '../lib/types'
 import LatencyChart from './LatencyChart'
 import ThroughputChart from './ThroughputChart'
 import Histogram from './Histogram'
@@ -9,10 +9,14 @@ import { useTestStore } from '../store/testStore'
 import { exportCSV, exportExcel } from '../lib/exporter'
 import { buildShareUrl } from '../lib/shareReport'
 
-interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[] }
+interface Props { report: ReportData; log?: LogEntry[]; latencies?: number[]; chartPts?: ChartPoint[]; tputPts?: TputPoint[] }
 
-export default function ReportView({ report, log = [], latencies }: Props) {
-  const { chartPts, tputPts } = useTestStore()
+export default function ReportView({ report, log = [], latencies, chartPts: chartPtsProp, tputPts: tputPtsProp }: Props) {
+  const store = useTestStore()
+  // Prefer explicitly-passed series (shared report) over the live store (Run page).
+  const chartPts = chartPtsProp ?? store.chartPts
+  const tputPts = tputPtsProp ?? store.tputPts
+  const lats = latencies ?? chartPts.map(p => p.lat)
   const [exportingExcel, setExportingExcel] = useState(false)
   const m = report.meta
   const sr = parseFloat(m.successRate)
@@ -120,17 +124,17 @@ export default function ReportView({ report, log = [], latencies }: Props) {
         <Histogram points={chartPts} />
       </div>
 
-      {latencies && latencies.length > 0 && (
+      {lats.length > 0 && (
         <div className="card mb-16">
-          <PercentileTable latencies={latencies} />
+          <PercentileTable latencies={lats} />
         </div>
       )}
 
-      {latencies && latencies.length > 0 && (
+      {lats.length > 0 && (
         <div className="card mb-16">
           <div className="card-title mb-12">Apdex Score & SLA</div>
           <ApdexCard
-            latencies={latencies}
+            latencies={lats}
             successRate={parseFloat(m.successRate)}
             avg={m.avgLatMs}
             p95={m.p95Ms}
@@ -159,17 +163,17 @@ export default function ReportView({ report, log = [], latencies }: Props) {
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <button className="btn btn-primary btn-sm" onClick={(e) => {
+        <button className="btn btn-primary btn-sm" onClick={async (e) => {
           const btn = e.currentTarget
           const orig = btn.textContent
-          const url = buildShareUrl(report)
-          navigator.clipboard.writeText(url).then(() => {
+          try {
+            const url = await buildShareUrl({ report, chartPts, tputPts })
+            await navigator.clipboard.writeText(url)
             btn.textContent = '✓ Copied!'
-            setTimeout(() => { btn.textContent = orig }, 2000)
-          }).catch(() => {
+          } catch {
             btn.textContent = '✗ Copy failed'
-            setTimeout(() => { btn.textContent = orig }, 2000)
-          })
+          }
+          setTimeout(() => { btn.textContent = orig }, 2000)
         }}>🔗 Share Report</button>
         <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
         <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>

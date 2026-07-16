@@ -44,6 +44,7 @@ export const useTestStore = create<TestState>((set, get) => {
   let accum = 0
   let lastTputSec = -1
   let tputSecCount = 0
+  let runPattern: PatternType = 'constant'
 
   function clearHandles() {
     if (tickH) { clearInterval(tickH); tickH = null }
@@ -63,7 +64,7 @@ export const useTestStore = create<TestState>((set, get) => {
     const rps = (sent / Math.max(0.1, parseFloat(elapsed))).toFixed(2)
     const parsed = (state as unknown as { _parsed: ParsedCurl })._parsed
     return {
-      meta: { url: parsed?.url ?? '', method: parsed?.method ?? '', pattern: '', elapsed, rps, total: sent, ok, fail, successRate: sr, avgLatMs: avg, p95Ms: p95, p99Ms: p99, maxLatMs: maxL },
+      meta: { url: parsed?.url ?? '', method: parsed?.method ?? '', pattern: runPattern, elapsed, rps, total: sent, ok, fail, successRate: sr, avgLatMs: avg, p95Ms: p95, p99Ms: p99, maxLatMs: maxL },
       failures: state.failures,
     }
   }
@@ -100,7 +101,7 @@ export const useTestStore = create<TestState>((set, get) => {
       clearHandles()
       stopController?.abort()
       stopController = new AbortController()
-      accum = 0; lastTputSec = -1; tputSecCount = 0
+      accum = 0; lastTputSec = -1; tputSecCount = 0; runPattern = pattern
       resetUniqueVars()
 
       const totalMs = getDurationMs(pattern, cfg)

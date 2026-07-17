@@ -20,6 +20,9 @@ beforeAll(async () => {
       const has = url.searchParams.get('has') === '1'
       res.writeHead(500, { 'Content-Type': 'text/plain' })
       res.end(has ? 'the needle is here' : 'no match here')
+    } else if (url.pathname === '/empty') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' })
+      res.end()
     } else if (url.pathname === '/slow') {
       const ms = Number(url.searchParams.get('ms') ?? '0')
       setTimeout(() => {
@@ -75,6 +78,25 @@ describe('fireRequest', () => {
   it('passes the body check when the response body contains the needle, on a non-2xx response', async () => {
     const r = await fireRequest(parsed('/needle?has=1'), 5000, 500, 599, false, 0, true, 'needle', true, new AbortController().signal)
     expect(r.ok).toBe(true)
+  })
+
+  it('fails the body check on a 2xx response whose body lacks the needle (even with captureBody off)', async () => {
+    // /ok returns 200 "hello"; the needle is absent. The assertion must run and
+    // fail — the 2xx status must not let the body check pass vacuously.
+    const r = await fireRequest(parsed('/ok'), 5000, 200, 299, false, 0, true, 'success', false, new AbortController().signal)
+    expect(r.ok).toBe(false)
+    expect(r.reason).toContain('Body missing "success"')
+  })
+
+  it('passes the body check on a 2xx response that contains the needle', async () => {
+    const r = await fireRequest(parsed('/ok'), 5000, 200, 299, false, 0, true, 'hello', false, new AbortController().signal)
+    expect(r.ok).toBe(true)
+  })
+
+  it('fails the body check on a 2xx response with an empty body (missing body is a failure)', async () => {
+    const r = await fireRequest(parsed('/empty'), 5000, 200, 299, false, 0, true, 'anything', false, new AbortController().signal)
+    expect(r.ok).toBe(false)
+    expect(r.reason).toContain('Body missing')
   })
 
   it('times out and reports a net failure when the server is slower than the timeout', async () => {

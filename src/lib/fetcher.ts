@@ -44,14 +44,20 @@ export async function fireRequest(
     clearTimeout(th)
     const lat = Date.now() - t0
 
+    // Read the body whenever it is needed: for the content assertion (on any
+    // status) or to capture a failed response for display. This is decoupled
+    // from res.ok so the assertion actually runs on 2xx responses instead of
+    // being silently skipped.
     let bodyTxt: string | null = null
-    if (captureBody && !res.ok) {
-      try { bodyTxt = (await res.text()).slice(0, 300) } catch { /* ignore */ }
+    if (bodyCheckOn || (captureBody && !res.ok)) {
+      try { bodyTxt = await res.text() } catch { /* ignore */ }
     }
 
     const codeOk = res.status >= scMin && res.status <= scMax
     const latOk = !latThreshOn || lat <= latThresh
-    const bodyOk = !bodyCheckOn || !bodyTxt || bodyTxt.includes(bodyCheck)
+    // A body assertion requires a body that contains the needle; a missing or
+    // unreadable body is a failure, not a vacuous pass.
+    const bodyOk = !bodyCheckOn || (bodyTxt !== null && bodyTxt.includes(bodyCheck))
     const success = codeOk && latOk && bodyOk
 
     const reasons: string[] = []
@@ -65,7 +71,9 @@ export async function fireRequest(
       status: res.status,
       lat,
       msg: success ? res.statusText || 'OK' : reason,
-      bodyText: bodyTxt,
+      // Surface a capped body sample for failed requests when the user opted to
+      // capture bodies (the full text above is only used for the assertion).
+      bodyText: captureBody && !success && bodyTxt !== null ? bodyTxt.slice(0, 300) : null,
       reason,
       badgeType: badgeType(res.status),
     }

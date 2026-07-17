@@ -42,7 +42,7 @@ export function parseCurl(raw: string): ParsedCurl {
       const h = tokens[++ti] || ''
       const c = h.indexOf(':')
       if (c > -1) headers[h.slice(0, c).trim()] = h.slice(c + 1).trim()
-    } else if (['-d', '--data', '--data-raw', '--data-binary', '--data-ascii'].includes(t)) {
+    } else if (['-d', '--data', '--data-raw', '--data-binary', '--data-ascii', '--data-urlencode'].includes(t)) {
       body = tokens[++ti] || ''
     } else if (t === '--json') {
       body = tokens[++ti] || ''

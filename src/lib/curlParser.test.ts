@@ -27,6 +27,13 @@ describe('parseCurl', () => {
     expect(r.method).toBe('POST')
   })
 
+  it('parses --data-urlencode as the body without clobbering the URL', () => {
+    const r = parseCurl(`curl https://api.example.com/form --data-urlencode 'name=John+Doe&city=NYC'`)
+    expect(r.url).toBe('https://api.example.com/form')
+    expect(r.body).toBe('name=John+Doe&city=NYC')
+    expect(r.method).toBe('POST')
+  })
+
   it('preserves quoted header values containing spaces', () => {
     const r = parseCurl('curl https://api.example.com -H "X-Custom: some value with spaces"')
     expect(r.headers['X-Custom']).toBe('some value with spaces')

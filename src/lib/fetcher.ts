@@ -88,7 +88,20 @@ export async function fireRequest(
   }
 }
 
-export function makeSemaphore(max: number) {
+export interface Semaphore {
+  acquire(): Promise<void>
+  release(): void
+  /** The concurrency ceiling this semaphore was created with. */
+  readonly max: number
+  /** Requests currently occupying a slot. */
+  readonly inFlight: number
+  /** Requests that have called acquire() but are still queued for a slot. */
+  readonly waiting: number
+  /** inFlight + waiting — the total work the semaphore is holding onto. */
+  readonly pending: number
+}
+
+export function makeSemaphore(max: number): Semaphore {
   let inFlight = 0
   const queue: Array<() => void> = []
 
@@ -102,5 +115,43 @@ export function makeSemaphore(max: number) {
     if (queue.length && inFlight < max) { inFlight++; queue.shift()!() }
   }
 
-  return { acquire, release }
+  return {
+    acquire,
+    release,
+    max,
+    get inFlight() { return inFlight },
+    get waiting() { return queue.length },
+    get pending() { return inFlight + queue.length },
+  }
+}
+
+/**
+ * How deep the semaphore's pending work may grow, as a multiple of its
+ * concurrency ceiling, before the scheduler applies backpressure. A small
+ * buffer beyond the in-flight slots keeps the pipe full between ticks (a
+ * freed slot always has a waiter ready) without letting unstarted requests
+ * pile up without bound when the target rate outpaces what the endpoint can
+ * complete. See scheduleBurst.
+ */
+export const SATURATION_FACTOR = 2
+
+/**
+ * Schedule up to `n` requests through `sem`, applying backpressure. Once the
+ * semaphore's pending depth (in-flight + waiting) reaches its saturation
+ * ceiling, the remaining requests for this burst are dropped instead of queued
+ * forever — the fix for unbounded memory growth when the target rate exceeds
+ * achievable throughput. Returns how many were skipped so callers can surface
+ * that the target rate can't be met.
+ *
+ * `fire` must acquire a slot synchronously up to its first await (the semaphore
+ * does), so pending depth is up to date between iterations of this loop.
+ */
+export function scheduleBurst(sem: Semaphore, n: number, fire: () => void): number {
+  const ceiling = sem.max * SATURATION_FACTOR
+  let skipped = 0
+  while (n-- > 0) {
+    if (sem.pending >= ceiling) { skipped++; continue }
+    fire()
+  }
+  return skipped
 }

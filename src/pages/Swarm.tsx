@@ -187,6 +187,9 @@ export default function Swarm() {
                   <span>Sent: {summary.sent}</span>
                   <span>OK: {summary.ok}</span>
                   <span>Fail: {summary.fail}</span>
+                  {summary.skipped > 0 && (
+                    <span className="text-yellow" title="Requests dropped because endpoints couldn't keep up with the target rate">Skipped: {summary.skipped}</span>
+                  )}
                   <span>Success: {summary.successRate}%</span>
                   <span>Avg: {summary.avg}ms</span>
                   <span>p95: {summary.p95}ms</span>

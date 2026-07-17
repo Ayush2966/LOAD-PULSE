@@ -1,9 +1,9 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { memo, useRef, useEffect, useCallback } from 'react'
 import type { ChartPoint } from '../lib/types'
 
 interface Props { points: ChartPoint[] }
 
-export default function LatencyChart({ points }: Props) {
+function LatencyChart({ points }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   const draw = useCallback(() => {
@@ -80,3 +80,8 @@ export default function LatencyChart({ points }: Props) {
     </div>
   )
 }
+
+// Memoized so it only redraws when `points` changes by reference — the store
+// hands it a fresh array only on the ~4/sec flush, not when Run re-renders for
+// unrelated reasons (form edits, progress ticks).
+export default memo(LatencyChart)

@@ -1,4 +1,4 @@
-import { percentile } from '../lib/percentile'
+import { percentileSorted, countAtMost } from '../lib/percentile'
 
 interface Props {
   latencies: number[]
@@ -14,7 +14,7 @@ export default function PercentileTable({ latencies }: Props) {
 
   const rows = PERCENTILES.map(p => ({
     label: `p${p}`,
-    value: percentile(sorted, p),
+    value: percentileSorted(sorted, p),
   }))
   rows.push({ label: 'max', value: max })
 
@@ -69,7 +69,7 @@ export default function PercentileTable({ latencies }: Props) {
               width: 48, fontSize: 10, color: 'var(--text3)',
               fontFamily: 'var(--font-mono)', flexShrink: 0
             }}>
-              {latencies.filter(l => l <= r.value).length} req
+              {countAtMost(sorted, r.value)} req
             </span>
           </div>
         ))}

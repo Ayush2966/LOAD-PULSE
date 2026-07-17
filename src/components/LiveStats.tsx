@@ -1,13 +1,14 @@
 import { useTestStore } from '../store/testStore'
-import { percentile } from '../lib/percentile'
 
 export default function LiveStats() {
-  const { stats, elapsedSec, actualRps, thresholdMsg, chartPts } = useTestStore()
-  const livePercentiles = chartPts.length > 10 ? {
-    p50: percentile(chartPts.map(p => p.lat), 50),
-    p95: percentile(chartPts.map(p => p.lat), 95),
-    p99: percentile(chartPts.map(p => p.lat), 99),
-  } : null
+  // Select only the fields this component displays so it re-renders on those
+  // alone (not on every chartPts/tputPts/logBuf mutation). Percentiles are
+  // pre-computed on the store's throttled tick, so nothing sorts in render.
+  const stats = useTestStore(s => s.stats)
+  const elapsedSec = useTestStore(s => s.elapsedSec)
+  const actualRps = useTestStore(s => s.actualRps)
+  const thresholdMsg = useTestStore(s => s.thresholdMsg)
+  const livePercentiles = useTestStore(s => s.livePercentiles)
   const sr = stats.sent ? (stats.ok / stats.sent * 100).toFixed(1) : '—'
 
   return (
@@ -30,6 +31,12 @@ export default function LiveStats() {
           <div className="stat-label">Fail</div>
           <div className="stat-value text-red">{stats.fail}</div>
         </div>
+        {stats.skipped > 0 && (
+          <div className="stat-box" title="Requests dropped because the endpoint couldn't keep up with the target rate">
+            <div className="stat-label">Skipped</div>
+            <div className="stat-value text-yellow">{stats.skipped}</div>
+          </div>
+        )}
         <div className="stat-box">
           <div className="stat-label">Success</div>
           <div className="stat-value">{sr}{sr !== '—' ? '%' : ''}</div>

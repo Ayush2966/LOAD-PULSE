@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTestStore } from '../store/testStore'
 import { useHistoryStore } from '../store/historyStore'
 import { describeTest } from '../lib/loadPatterns'
@@ -67,8 +68,20 @@ export default function Run() {
   const [showChain, setShowChain] = useState(false)
   const [showPostman, setShowPostman] = useState(false)
 
-  const { running, status, stats, chartPts, tputPts, logBuf, progressPct, report, thresholdMsg } = useTestStore()
-  const { startTest, stopTest, reset } = useTestStore()
+  // Subscribe to just the fields this page reads (shallow-compared) so it
+  // re-renders only when one of them changes — not on every unrelated store
+  // write. The heavy children (LatencyChart/ThroughputChart/LogFeed) are
+  // memoized, so they redraw only when their own slice gets a fresh reference.
+  const { running, status, stats, chartPts, tputPts, logBuf, progressPct, report, thresholdMsg } = useTestStore(
+    useShallow(s => ({
+      running: s.running, status: s.status, stats: s.stats,
+      chartPts: s.chartPts, tputPts: s.tputPts, logBuf: s.logBuf,
+      progressPct: s.progressPct, report: s.report, thresholdMsg: s.thresholdMsg,
+    }))
+  )
+  const startTest = useTestStore(s => s.startTest)
+  const stopTest = useTestStore(s => s.stopTest)
+  const reset = useTestStore(s => s.reset)
   const { addRun } = useHistoryStore()
 
   const patch = useCallback((p: Partial<FormState>) => setForm(f => ({ ...f, ...p })), [])

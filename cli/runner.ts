@@ -1,5 +1,5 @@
 import { getRps, getDurationMs, getConcur, getTimeout } from '../src/lib/loadPatterns.ts'
-import { fireRequest, makeSemaphore } from '../src/lib/fetcher.ts'
+import { fireRequest, makeSemaphore, scheduleBurst } from '../src/lib/fetcher.ts'
 import { resetUniqueVars } from '../src/lib/variableInjector.ts'
 import { percentile } from '../src/lib/percentile.ts'
 import type { TestConfig, PatternType, ReportData, FailureGroup, ChartPoint } from '../src/lib/types.ts'
@@ -8,6 +8,8 @@ export interface RunSnapshot {
   sent: number
   ok: number
   fail: number
+  /** Requests dropped because the endpoint couldn't keep up with the target rate. */
+  skipped: number
   elapsedMs: number
   totalMs: number
 }
@@ -28,7 +30,7 @@ export async function runTest(
   const stopController = new AbortController()
   abortSignal?.addEventListener('abort', () => stopController.abort())
 
-  let sent = 0, ok = 0, fail = 0
+  let sent = 0, ok = 0, fail = 0, skipped = 0
   const chartPts: ChartPoint[] = []
   const failures: Record<string, FailureGroup> = {}
   let stopped = false
@@ -78,13 +80,15 @@ export async function runTest(
     const el = Date.now() - startTime
     const rps = getRps(pattern, el, totalMs, cfg)
     accum += rps * 0.1
-    let n = Math.floor(accum)
+    const n = Math.floor(accum)
     accum -= n
-    while (n-- > 0) fireOne()
+    // backpressure: never schedule more than the semaphore can hold, so a slow
+    // endpoint can't build an unbounded backlog of unstarted requests
+    skipped += scheduleBurst(sem, n, fireOne)
   }, 100)
 
   const uiInterval = setInterval(() => {
-    onTick({ sent, ok, fail, elapsedMs: Date.now() - startTime, totalMs })
+    onTick({ sent, ok, fail, skipped, elapsedMs: Date.now() - startTime, totalMs })
   }, 250)
 
   await new Promise<void>(resolve => {

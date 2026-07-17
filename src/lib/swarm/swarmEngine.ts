@@ -1,6 +1,6 @@
 import type { TestConfig, PatternType } from '../types'
 import { getRps, getDurationMs, getConcur, getTimeout } from '../loadPatterns'
-import { fireRequest, makeSemaphore } from '../fetcher'
+import { fireRequest, makeSemaphore, scheduleBurst } from '../fetcher'
 import { createVarSpace } from '../variableInjector'
 
 /**
@@ -15,6 +15,8 @@ export interface SwarmSampleWindow {
   sent: number
   ok: number
   fail: number
+  /** Requests dropped because the endpoint couldn't keep up with this node's target rate. */
+  skipped: number
   codes: Record<number, number>
   latencies: number[]
   windowStartMs: number
@@ -61,13 +63,13 @@ export function runSwarmSlice(
 
     let accum = 0
     let stopped = false
-    let win: SwarmSampleWindow = { sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], windowStartMs: 0, windowEndMs: 0 }
+    let win: SwarmSampleWindow = { sent: 0, ok: 0, fail: 0, skipped: 0, codes: {}, latencies: [], windowStartMs: 0, windowEndMs: 0 }
 
     function flushWindow() {
       const el = Date.now() - startTime
       win.windowEndMs = el
       if (win.sent > 0) onSample(win)
-      win = { sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], windowStartMs: el, windowEndMs: el }
+      win = { sent: 0, ok: 0, fail: 0, skipped: 0, codes: {}, latencies: [], windowStartMs: el, windowEndMs: el }
     }
 
     async function fireOne() {
@@ -98,8 +100,10 @@ export function runSwarmSlice(
       const el = Date.now() - startTime
       const rps = getRps(pattern, el, totalMs, cfg) * shareRef.value
       accum += rps * 0.1
-      let n = Math.floor(accum); accum -= n
-      while (n-- > 0) void fireOne()
+      const n = Math.floor(accum); accum -= n
+      // backpressure: never schedule more than the semaphore can hold, so a slow
+      // endpoint can't build an unbounded backlog of unstarted requests per node
+      win.skipped += scheduleBurst(sem, n, fireOne)
     }, 100)
 
     const reportH = setInterval(flushWindow, REPORT_INTERVAL_MS)

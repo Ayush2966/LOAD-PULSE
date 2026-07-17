@@ -34,6 +34,22 @@ describe('parseCurl', () => {
     expect(r.method).toBe('POST')
   })
 
+  it("rejoins adjacent quoted segments split by the '\\'' shell escape idiom", () => {
+    // A single-quoted body containing ' is emitted as '...'\''...'. The shell
+    // concatenates the adjacent segments back into one word (O'Brien), so the
+    // tokenizer must too — not split it into several tokens.
+    const r = parseCurl(`curl -X POST https://api.example.com/users -d '{"name":"O'\\''Brien"}'`)
+    expect(r.url).toBe('https://api.example.com/users')
+    expect(r.method).toBe('POST')
+    expect(r.body).toBe('{"name":"O\'Brien"}')
+  })
+
+  it('keeps spaces inside single quotes within a word that also uses the escape idiom', () => {
+    const r = parseCurl(`curl https://api.example.com -d '{"msg":"it'\\''s a test"}'`)
+    expect(r.url).toBe('https://api.example.com')
+    expect(r.body).toBe('{"msg":"it\'s a test"}')
+  })
+
   it('preserves quoted header values containing spaces', () => {
     const r = parseCurl('curl https://api.example.com -H "X-Custom: some value with spaces"')
     expect(r.headers['X-Custom']).toBe('some value with spaces')

@@ -77,4 +77,20 @@ describe('requestToCurl round-trip', () => {
     // not encode it a second time and must not leak into the URL.
     expect(parsed.body).toBe('name=John%20Doe&city=New%20York')
   })
+
+  it('round-trips a raw body containing a single quote without mangling it', () => {
+    const curl = requestToCurl(
+      {
+        method: 'POST',
+        url: 'https://api.example.com/users',
+        body: { mode: 'raw', raw: '{"name":"O\'Brien"}' },
+      },
+      'Create user',
+    )
+
+    const parsed = parseCurl(curl)
+    expect(parsed.url).toBe('https://api.example.com/users')
+    expect(parsed.method).toBe('POST')
+    expect(parsed.body).toBe('{"name":"O\'Brien"}')
+  })
 })

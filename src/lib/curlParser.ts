@@ -1,26 +1,46 @@
 import type { ParsedCurl } from './types'
 
+// Split a curl command into arguments the way a POSIX shell would: one token
+// per *word*, where a word is any run of adjacent quoted, escaped and bare
+// characters uninterrupted by unquoted whitespace. Accumulating across segments
+// (rather than emitting a token per quoted span) is what lets the '\'' idiom
+// that requestToCurl emits for a body containing ' — e.g. 'O'\''Brien' — collapse
+// back into the single argument O'Brien instead of being split and mangled.
 function tokenize(s: string): string[] {
   const tokens: string[] = []
   let i = 0
   while (i < s.length) {
     while (i < s.length && /\s/.test(s[i])) i++
     if (i >= s.length) break
-    if (s[i] === '"' || s[i] === "'") {
-      const q = s[i++]
-      let buf = ''
-      while (i < s.length && s[i] !== q) {
-        if (s[i] === '\\' && i + 1 < s.length) { i++; buf += s[i] }
-        else buf += s[i]
+
+    let buf = ''
+    while (i < s.length && !/\s/.test(s[i])) {
+      const c = s[i]
+      if (c === "'") {
+        // Single quotes are literal in POSIX: everything up to the next ' is
+        // taken verbatim, backslashes included.
+        i++
+        while (i < s.length && s[i] !== "'") buf += s[i++]
+        i++
+      } else if (c === '"') {
+        // Double quotes allow backslash escapes.
+        i++
+        while (i < s.length && s[i] !== '"') {
+          if (s[i] === '\\' && i + 1 < s.length) { i++; buf += s[i] }
+          else buf += s[i]
+          i++
+        }
+        i++
+      } else if (c === '\\' && i + 1 < s.length) {
+        // Backslash outside quotes escapes the next character.
+        i++
+        buf += s[i++]
+      } else {
+        buf += c
         i++
       }
-      i++
-      tokens.push(buf)
-    } else {
-      let buf = ''
-      while (i < s.length && !/\s/.test(s[i])) buf += s[i++]
-      tokens.push(buf)
     }
+    tokens.push(buf)
   }
   return tokens
 }

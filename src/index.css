@@ -490,6 +490,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .text-dimmed { color: var(--text3); }
 .text-green { color: #3fb950; }
 .text-red { color: #f85149; }
+.text-yellow { color: #e3b341; }
 .text-mono { font-family: var(--font-mono); }
 .w-full { width: 100%; }
 .section-sep { height: 1px; background: var(--border); margin: 16px 0; }

@@ -1,8 +1,9 @@
+import { memo } from 'react'
 import type { LogEntry } from '../lib/types'
 
 interface Props { entries: LogEntry[] }
 
-export default function LogFeed({ entries }: Props) {
+function LogFeed({ entries }: Props) {
   return (
     <div className="log-feed">
       {entries.length === 0 && (
@@ -21,3 +22,7 @@ export default function LogFeed({ entries }: Props) {
     </div>
   )
 }
+
+// Memoized so the 150-row list only re-renders when `entries` changes by
+// reference — a fresh array only on the ~4/sec flush, not on every Run render.
+export default memo(LogFeed)

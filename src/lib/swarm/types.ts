@@ -38,6 +38,7 @@ export interface SwarmSampleMsg {
   sent: number
   ok: number
   fail: number
+  skipped: number
   codes: Record<number, number>
   latencies: number[]
   windowStartMs: number

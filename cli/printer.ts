@@ -49,7 +49,9 @@ export function printProgress(snap: RunSnapshot): void {
 
   const spin = SPINNER[spinIdx++ % SPINNER.length]
   const bar  = progressBar(pct)
-  const line = `  ${cyan(spin)}  ${bar} ${dim(elapsed + 's / ' + total + 's')}  sent ${bold(String(snap.sent))}  ok ${green(String(snap.ok))}  fail ${snap.fail > 0 ? red(String(snap.fail)) : dim('0')}  SR ${sr}%  RPS ${rps}`
+  // only shown once the endpoint falls behind the target rate — a saturation signal
+  const skippedSeg = snap.skipped > 0 ? `  ${yellow('skipped ' + snap.skipped)}` : ''
+  const line = `  ${cyan(spin)}  ${bar} ${dim(elapsed + 's / ' + total + 's')}  sent ${bold(String(snap.sent))}  ok ${green(String(snap.ok))}  fail ${snap.fail > 0 ? red(String(snap.fail)) : dim('0')}${skippedSeg}  SR ${sr}%  RPS ${rps}`
 
   // overwrite the same terminal line
   process.stderr.write('\r' + line)

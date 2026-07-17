@@ -1,9 +1,9 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { memo, useRef, useEffect, useCallback } from 'react'
 import type { TputPoint } from '../lib/types'
 
 interface Props { points: TputPoint[] }
 
-export default function ThroughputChart({ points }: Props) {
+function ThroughputChart({ points }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   const draw = useCallback(() => {
@@ -91,3 +91,7 @@ export default function ThroughputChart({ points }: Props) {
     </div>
   )
 }
+
+// Memoized so it only redraws when `points` changes by reference — the store
+// hands it a fresh array only when a new per-second point is added (~1/sec).
+export default memo(ThroughputChart)

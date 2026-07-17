@@ -50,6 +50,22 @@ describe('parseCurl', () => {
     expect(r.body).toBe('{"msg":"it\'s a test"}')
   })
 
+  it('treats backslashes inside single quotes as fully literal (POSIX)', () => {
+    // POSIX single quotes do no escape processing, so a regex body keeps its
+    // backslash instead of the tokenizer swallowing it.
+    const r = parseCurl(String.raw`curl https://api.example.com -d '{"pattern":"\d+"}'`)
+    expect(r.url).toBe('https://api.example.com')
+    expect(r.body).toBe(String.raw`{"pattern":"\d+"}`)
+  })
+
+  it('keeps escaped double-quotes literal inside single quotes', () => {
+    // \" inside single quotes must survive verbatim; stripping the backslash
+    // would corrupt the JSON into {"msg":"say "hi""}.
+    const r = parseCurl(String.raw`curl https://api.example.com -d '{"msg":"say \"hi\""}'`)
+    expect(r.url).toBe('https://api.example.com')
+    expect(r.body).toBe(String.raw`{"msg":"say \"hi\""}`)
+  })
+
   it('preserves quoted header values containing spaces', () => {
     const r = parseCurl('curl https://api.example.com -H "X-Custom: some value with spaces"')
     expect(r.headers['X-Custom']).toBe('some value with spaces')

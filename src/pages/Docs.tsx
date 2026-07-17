@@ -389,13 +389,12 @@ curl -X POST https://api.example.com/payments \\
       {/* 12. Presets */}
       <section id="presets" className="docs-section">
         <h2 className="docs-h2">12. Presets</h2>
-        <p className="docs-p">Save your current cURL + pattern + rate/duration as a named preset so you don't have to reconfigure every time.</p>
+        <p className="docs-p">LoadPulse ships with a few built-in presets — ready-made cURL commands (a public JSON API, httpbin GET/POST, and a slow endpoint) so you can try a load test in one click without writing your own.</p>
         <div className="docs-steps">
           {[
-            ['Configure your test', 'Paste your cURL, set your pattern and rate settings.'],
-            ['Open Presets', 'Click the Presets card to expand it.'],
-            ['Save current', 'Click "Save current", enter a name (e.g. "Auth API - 50rps"), and press OK.'],
-            ['Load later', 'Click any preset chip to instantly restore the saved cURL and settings. Click × to delete a preset.'],
+            ['Find the Presets card', 'On the Run page, the Presets card sits just above the cURL input.'],
+            ['Pick a preset', 'Click any preset card to load its cURL command straight into the input.'],
+            ['Tweak and run', 'Edit the cURL, add variables, choose your load pattern and rate/duration, then run as normal.'],
           ].map(([title, desc], i) => (
             <div key={i} className="docs-step">
               <div className="docs-step-num">{i + 1}</div>
@@ -405,7 +404,7 @@ curl -X POST https://api.example.com/payments \\
         </div>
         <div className="docs-callout">
           <span className="docs-callout-icon">💡</span>
-          <span>Presets are saved in <code>localStorage</code> and persist across sessions. They store the cURL command, pattern type, and rate/duration values.</span>
+          <span>Presets are built-in examples: clicking one loads its cURL command into the input. They don't store pattern or rate settings, and they can't be saved, edited, or deleted. To reuse your own configurations, keep your cURL commands handy or use Postman Import (below).</span>
         </div>
       </section>
 

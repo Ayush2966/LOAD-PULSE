@@ -82,15 +82,13 @@ export function requestToCurl(req: PMRequest, _name: string): string {
     parts.push(`  -H '${h.key}: ${h.value}'`)
   }
 
-  // Body
+  // Body — resolveBody already returns the exact wire format for both raw and
+  // urlencoded bodies. Emit it verbatim with -d; using --data-urlencode here
+  // would make curl re-encode an already-encoded body (double-encoding).
   const body = resolveBody(req.body)
   if (body) {
-    if (req.body?.mode === 'urlencoded') {
-      parts.push(`  --data-urlencode '${body}'`)
-    } else {
-      const escaped = body.replace(/'/g, "'\\''")
-      parts.push(`  -d '${escaped}'`)
-    }
+    const escaped = body.replace(/'/g, "'\\''")
+    parts.push(`  -d '${escaped}'`)
   }
 
   return parts.join(' \\\n')
